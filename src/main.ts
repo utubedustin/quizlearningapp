@@ -1,0 +1,73 @@
+import { Component } from '@angular/core';
+import { bootstrapApplication } from '@angular/platform-browser';
+import { RouterOutlet, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+
+import { HeaderComponent } from './components/header.component';
+import { HomeComponent } from './components/home.component';
+import { QuestionManagementComponent } from './components/question-management.component';
+import { StudyComponent } from './components/study.component';
+import { PracticeComponent } from './components/practice.component';
+import { QuizComponent } from './components/quiz.component';
+import { ResultsComponent } from './components/results.component';
+import { ConfirmationDialogComponent } from './components/confirmation-dialog.component';
+import { DialogService, DialogState } from './services/dialog.service';
+
+const routes = [
+  { path: '', component: HomeComponent },
+  { path: 'questions', component: QuestionManagementComponent },
+  { path: 'study', component: StudyComponent },
+  { path: 'practice', component: PracticeComponent },
+  { path: 'quiz', component: QuizComponent },
+  { path: 'results', component: ResultsComponent },
+  { path: '**', redirectTo: '' }
+];
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [CommonModule, RouterOutlet, HeaderComponent, ConfirmationDialogComponent],
+  template: `
+    <div class="min-h-screen bg-gray-50">
+      <app-header></app-header>
+      <router-outlet></router-outlet>
+      
+      <!-- Global Confirmation Dialog -->
+      <app-confirmation-dialog
+        [isOpen]="dialogState.isOpen"
+        [title]="dialogState.config.title || 'Xác nhận'"
+        [message]="dialogState.config.message"
+        [confirmText]="dialogState.config.confirmText || 'Xác nhận'"
+        [cancelText]="dialogState.config.cancelText || 'Hủy'"
+        (confirmed)="onDialogConfirmed()"
+        (cancelled)="onDialogCancelled()"
+      ></app-confirmation-dialog>
+    </div>
+  `
+})
+export class App {
+  dialogState: DialogState = { isOpen: false, config: { message: '' } };
+
+  constructor(private dialogService: DialogService) {
+    this.dialogService.dialogState$.subscribe(state => {
+      this.dialogState = state;
+    });
+  }
+
+  onDialogConfirmed() {
+    this.dialogService.close(true);
+  }
+
+  onDialogCancelled() {
+    this.dialogService.close(false);
+  }
+}
+
+bootstrapApplication(App, {
+  providers: [
+    provideRouter(routes),
+    provideHttpClient()
+  ]
+});

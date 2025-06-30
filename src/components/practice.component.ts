@@ -1,0 +1,219 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { QuestionService } from '../services/question.service';
+import { ExamConfig } from '../models/question.model';
+
+@Component({
+  selector: 'app-practice',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div class="container py-8">
+      <h1 class="text-2xl font-bold mb-6">Luyện thi</h1>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1">
+          <div class="card">
+            <h2 class="text-lg font-semibold mb-4">Cấu hình bài thi</h2>
+            
+            <div class="space-y-4">
+              <div>
+                <label class="block font-medium mb-2">Số lượng câu hỏi</label>
+                <select [(ngModel)]="examConfig.numberOfQuestions" class="select">
+                  <option [value]="10">10 câu</option>
+                  <option [value]="20">20 câu</option>
+                  <option [value]="30">30 câu</option>
+                  <option [value]="50">50 câu</option>
+                  <option [value]="totalQuestions" *ngIf="totalQuestions > 0">
+                    Tất cả ({{ totalQuestions }} câu)
+                  </option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="block font-medium mb-2">Thời gian làm bài</label>
+                <select [(ngModel)]="examConfig.timeLimit" class="select">
+                  <option [value]="5">5 phút</option>
+                  <option [value]="10">10 phút</option>
+                  <option [value]="15">15 phút</option>
+                  <option [value]="30">30 phút</option>
+                  <option [value]="45">45 phút</option>
+                  <option [value]="60">60 phút</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="examConfig.randomize"
+                    class="rounded"
+                  >
+                  <span class="font-medium">Trộn câu hỏi ngẫu nhiên</span>
+                </label>
+                <p class="text-sm text-gray-600 mt-1">
+                  Thứ tự câu hỏi sẽ được xáo trộn mỗi lần thi
+                </p>
+              </div>
+            </div>
+            
+            <button 
+              class="btn btn-primary w-full mt-6" 
+              (click)="startPracticeTest()"
+              [disabled]="totalQuestions === 0"
+            >
+              Bắt đầu thi
+            </button>
+            
+            <div *ngIf="totalQuestions === 0" class="text-center mt-4">
+              <p class="text-error text-sm">Chưa có câu hỏi nào để thi</p>
+              <button class="btn btn-outline mt-2" (click)="router.navigate(['/questions'])">
+                Thêm câu hỏi
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="lg:col-span-2">
+          <div class="card">
+            <h2 class="text-lg font-semibold mb-4">Lịch sử luyện thi</h2>
+            
+            <div *ngIf="practiceResults.length === 0" class="text-center py-8 text-gray-500">
+              Chưa có lần thi nào
+            </div>
+            
+            <div *ngIf="practiceResults.length > 0" class="space-y-4">
+              <div *ngFor="let result of practiceResults; let i = index" 
+                   class="border rounded-lg p-4"
+                   [class.border-success]="result.score >= 0.8"
+                   [class.bg-green-50]="result.score >= 0.8"
+                   [class.border-warning]="result.score >= 0.5 && result.score < 0.8"
+                   [class.bg-yellow-50]="result.score >= 0.5 && result.score < 0.8"
+                   [class.border-error]="result.score < 0.5"
+                   [class.bg-red-50]="result.score < 0.5">
+                
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 class="font-semibold">Lần thi #{{ practiceResults.length - i }}</h4>
+                    <p class="text-sm text-gray-600">
+                      {{ result.completedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-lg font-bold"
+                         [class.text-success]="result.score >= 0.8"
+                         [class.text-warning]="result.score >= 0.5 && result.score < 0.8"
+                         [class.text-error]="result.score < 0.5">
+                      {{ (result.score * 100) | number:'1.0-0' }}%
+                    </div>
+                    <div class="text-sm text-gray-600">
+                      {{ result.score * result.totalQuestions | number:'1.0-0' }}/{{ result.totalQuestions }} câu
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-3">
+                  <div class="text-sm">
+                    <span class="text-gray-600">Thời gian:</span>
+                    <span class="font-medium ml-1">{{ formatTime(result.timeSpent) }}</span>
+                  </div>
+                  <div class="text-sm">
+                    <span class="text-gray-600">Tổng câu:</span>
+                    <span class="font-medium ml-1">{{ result.totalQuestions }}</span>
+                  </div>
+                </div>
+                
+                <div class="mt-3">
+                  <div class="progress-bar">
+                    <div class="progress-fill" 
+                         [style.width.%]="result.score * 100"
+                         [class.bg-success]="result.score >= 0.8"
+                         [class.bg-warning]="result.score >= 0.5 && result.score < 0.8"
+                         [class.bg-error]="result.score < 0.5">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div *ngIf="practiceResults.length > 0" class="mt-6 pt-4 border-t">
+              <h3 class="font-semibold mb-2">Thống kê tổng quan</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-primary">{{ practiceResults.length }}</div>
+                  <div class="text-sm text-gray-600">Tổng lần thi</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-secondary">{{ getAverageScore() }}%</div>
+                  <div class="text-sm text-gray-600">Điểm trung bình</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-accent">{{ getBestScore() }}%</div>
+                  <div class="text-sm text-gray-600">Điểm cao nhất</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+})
+export class PracticeComponent implements OnInit {
+  totalQuestions = 0;
+  practiceResults: any[] = [];
+  
+  examConfig: ExamConfig = {
+    numberOfQuestions: 20,
+    timeLimit: 30,
+    randomize: true
+  };
+
+  constructor(
+    private questionService: QuestionService,
+    public router: Router
+  ) {}
+
+  ngOnInit() {
+    this.questionService.getQuestions().subscribe(questions => {
+      this.totalQuestions = questions.length;
+    });
+    
+    this.questionService.getQuizResults().subscribe(results => {
+      this.practiceResults = results.filter(r => r.mode === 'practice')
+        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+    });
+  }
+
+  startPracticeTest() {
+    const questions = this.questionService.createRandomQuiz(this.examConfig);
+    
+    this.router.navigate(['/quiz'], {
+      queryParams: {
+        mode: 'practice',
+        questions: JSON.stringify(questions.map(q => q.id)),
+        timeLimit: this.examConfig.timeLimit
+      }
+    });
+  }
+
+  formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  getAverageScore(): number {
+    if (this.practiceResults.length === 0) return 0;
+    const total = this.practiceResults.reduce((sum, result) => sum + result.score, 0);
+    return Math.round((total / this.practiceResults.length) * 100);
+  }
+
+  getBestScore(): number {
+    if (this.practiceResults.length === 0) return 0;
+    const best = Math.max(...this.practiceResults.map(r => r.score));
+    return Math.round(best * 100);
+  }
+}
