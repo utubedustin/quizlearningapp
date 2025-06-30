@@ -33,3 +33,11 @@ export interface ExamConfig {
   timeLimit: number; // in minutes
   randomize: boolean;
 }
+
+
+export interface PDFParseResult {
+  questions: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>[];
+  errors: string[];
+  totalExtracted: number;
+  duplicatesFound: number;
+}

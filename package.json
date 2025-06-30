@@ -15,12 +15,12 @@
     "@angular/forms": "^20.0.0",
     "@angular/platform-browser": "^20.0.0",
     "@angular/router": "^20.0.0",
-    "rxjs": "^7.8.1",
-    "tslib": "^2.5.0",
-    "zone.js": "~0.15.0",
     "mongodb": "^6.3.0",
     "pdf-parse": "^1.1.1",
-    "pdfjs-dist": "^4.0.379"
+    "pdfjs-dist": "^5.3.31",
+    "rxjs": "^7.8.1",
+    "tslib": "^2.5.0",
+    "zone.js": "~0.15.0"
   },
   "devDependencies": {
     "@angular/build": "^20.0.0",

@@ -37,7 +37,7 @@ export class MongoDBService {
   testConnection(): Observable<boolean> {
     return this.http.get<{success: boolean}>(`${environment.api.baseUrl}/test-connection`)
       .pipe(
-        map(response => {
+        map(response => { 
           const currentConfig = this.configSubject.value;
           this.configSubject.next({
             ...currentConfig,

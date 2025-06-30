@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of, forkJoin } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
-import { Question, QuizSet, QuizResult, ExamConfig } from '../models/question.model';
+import { Question, QuizSet, QuizResult, ExamConfig, PDFParseResult } from '../models/question.model';
 import { MongoDBService } from './mongodb.service';
-import { PDFParserService, PDFParseResult } from './pdf-parser.service';
+import { PdfParserService } from './pdf-parser.service';
+// import { PDFParserService, PDFParseResult } from './pdf-parser.service';
 
 @Injectable({
   providedIn: 'root'
@@ -19,7 +20,7 @@ export class QuestionService {
 
   constructor(
     private mongoService: MongoDBService,
-    private pdfParser: PDFParserService
+    private pdfParser: PdfParserService
   ) {
     this.loadData();
   }
@@ -180,54 +181,58 @@ export class QuestionService {
   // Enhanced PDF processing with duplicate detection
   async processPDFFile(file: File): Promise<PDFParseResult> {
     try {
-      // Parse PDF
+      // Step 1: Parse PDF
       const parseResult = await this.pdfParser.parsePDFFile(file);
-      
+
       if (parseResult.questions.length === 0) {
         return parseResult;
       }
 
-      // Validate questions
+      // Step 2: Validate extracted questions
       const validation = this.pdfParser.validateQuestions(parseResult.questions);
-      
       if (validation.invalid.length > 0) {
         console.warn('Invalid questions found:', validation.invalid);
       }
 
-      // Check for duplicates against existing questions
-      const duplicateCheck = await this.mongoService.checkDuplicateQuestions(validation.valid).toPromise();
-      
+      // Step 3: Check for duplicates against MongoDB
+      const duplicateCheck = await this.mongoService
+        .checkDuplicateQuestions(validation.valid)
+        .toPromise();
+
       if (duplicateCheck && duplicateCheck.unique.length > 0) {
-        // Add unique questions to MongoDB
-        const bulkResult = await this.mongoService.addMultipleQuestions(duplicateCheck.unique).toPromise();
-        
+        // Step 4: Add new questions to MongoDB
+        const bulkResult = await this.mongoService
+          .addMultipleQuestions(duplicateCheck.unique)
+          .toPromise();
+
         if (bulkResult) {
-          // Update local state
+          // Step 5: Update frontend state
           const currentQuestions = this.questionsSubject.value;
           this.questionsSubject.next([...currentQuestions, ...bulkResult.inserted]);
-          
+
           return {
             questions: bulkResult.inserted,
-            errors: [...parseResult.errors, ...bulkResult.errors],
+            errors: [...parseResult.errors, ...(bulkResult.errors || [])],
             totalExtracted: parseResult.totalExtracted,
-            duplicatesFound: bulkResult.duplicates + (duplicateCheck.duplicates?.length || 0)
+            duplicatesFound:
+              (bulkResult.duplicates || 0) + (duplicateCheck.duplicates?.length || 0),
           };
         }
       }
 
+      // No new questions to insert
       return {
         ...parseResult,
         questions: validation.valid,
-        duplicatesFound: duplicateCheck?.duplicates?.length || 0
+        duplicatesFound: duplicateCheck?.duplicates?.length || 0,
       };
-
     } catch (error) {
       console.error('PDF processing error:', error);
       return {
         questions: [],
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         totalExtracted: 0,
-        duplicatesFound: 0
+        duplicatesFound: 0,
       };
     }
   }
