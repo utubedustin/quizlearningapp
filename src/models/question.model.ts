@@ -2,7 +2,7 @@ export interface Question {
   _id: string;
   content: string;
   options: string[];
-  correctAnswer: number;
+  correctAnswer: number | number[]; // Support both single and multiple correct answers
   category?: string;
   difficulty?: 'easy' | 'medium' | 'hard';
   createdAt: Date;
@@ -20,7 +20,7 @@ export interface QuizResult {
   id: string;
   quizSetId: string;
   questions: Question[];
-  userAnswers: (number | null)[];
+  userAnswers: (number | number[] | null)[]; // Support multiple answers
   score: number;
   totalQuestions: number;
   timeSpent: number; // in seconds
@@ -33,7 +33,6 @@ export interface ExamConfig {
   timeLimit: number; // in minutes
   randomize: boolean;
 }
-
 
 export interface PDFParseResult {
   questions: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>[];

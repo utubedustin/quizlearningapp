@@ -1,0 +1,385 @@
+<div class="quiz-container" *ngIf="!showResults && mode !== 'review'">
+  <!-- Header -->
+  <div class="quiz-header">
+    <div class="quiz-title">
+      <h1 class="text-xl md:text-2xl font-bold">
+        {{ mode === 'study' ? 'Học bài' : 'Luyện thi' }}
+      </h1>
+      <p class="text-gray-600 text-sm md:text-base">
+        Câu {{ currentQuestionIndex + 1 }} / {{ questions.length }}
+      </p>
+    </div>
+    
+    <div class="quiz-controls">
+      <div *ngIf="timeLimit > 0 && mode === 'practice'" class="timer"
+           [class.warning]="remainingTime <= 300 && remainingTime > 60"
+           [class.danger]="remainingTime <= 60">
+        ⏱️ {{ formatTime(remainingTime) }}
+      </div>
+      <button class="btn btn-outline btn-sm" (click)="saveAndExit()">
+        Lưu và thoát
+      </button>
+    </div>
+  </div>
+
+  <!-- Fixed Timer for Mobile Practice Mode -->
+  <div *ngIf="timeLimit > 0 && mode === 'practice' && isMobile" 
+       class="fixed-timer"
+       [class.fixed-timer-visible]="isTimerFixed"
+       [class.warning]="remainingTime <= 300 && remainingTime > 60"
+       [class.danger]="remainingTime <= 60">
+    ⏱️ {{ formatTime(remainingTime) }}
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-section">
+    <div class="progress-bar">
+      <div class="progress-fill" 
+           [style.width.%]="completionPercentage">
+      </div>
+    </div>
+    <div class="progress-text">
+      Hoàn thành: {{ completionPercentage | number:'1.0-0' }}%
+    </div>
+  </div>
+
+  <!-- Question List (Mobile - Top) -->
+  <div class="question-list-mobile">
+    <h3 class="question-list-title">Danh sách câu hỏi</h3>
+    <div class="question-grid-mobile">
+      <button *ngFor="let question of questions; let i = index"
+              class="question-item"
+              [class.current]="i === currentQuestionIndex"
+              [class.answered]="userAnswers[i] !== null && i !== currentQuestionIndex"
+              [class.unanswered]="userAnswers[i] === null && i !== currentQuestionIndex"
+              (click)="goToQuestion(i)">
+        {{ i + 1 }}
+      </button>
+    </div>
+    <div class="question-legend">
+      <div class="legend-item">
+        <div class="legend-color current"></div>
+        <span>Hiện tại</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color answered"></div>
+        <span>Đã trả lời</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color unanswered"></div>
+        <span>Chưa trả lời</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="quiz-main">
+    <!-- Question List (Desktop - Sidebar) -->
+    <div class="question-sidebar">
+      <div class="sidebar-header">
+        <h3 class="sidebar-title">Danh sách câu hỏi</h3>
+        <div *ngIf="timeLimit > 0 && mode === 'study'" class="timer timer-sidebar"
+             [class.warning]="remainingTime <= 300 && remainingTime > 60"
+             [class.danger]="remainingTime <= 60">
+          ⏱️ {{ formatTime(remainingTime) }}
+        </div>
+      </div>
+      
+      <div class="question-grid">
+        <button *ngFor="let question of questions; let i = index"
+                class="question-item"
+                [class.current]="i === currentQuestionIndex"
+                [class.answered]="userAnswers[i] !== null && i !== currentQuestionIndex"
+                [class.unanswered]="userAnswers[i] === null && i !== currentQuestionIndex"
+                (click)="goToQuestion(i)">
+          {{ i + 1 }}
+        </button>
+      </div>
+      
+      <div class="question-legend">
+        <div class="legend-item">
+          <div class="legend-color current"></div>
+          <span>Hiện tại</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color answered"></div>
+          <span>Đã trả lời</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color unanswered"></div>
+          <span>Chưa trả lời</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question Content -->
+    <div class="question-content">
+      <div *ngIf="currentQuestion" class="question-card">
+        <h2 class="question-title">
+          {{ currentQuestion.content }}
+        </h2>
+        
+        <!-- Question Type Indicator -->
+        <div class="question-type-indicator">
+          <span class="type-badge" [class.single-choice]="isSingleChoice(currentQuestion)" [class.multiple-choice]="!isSingleChoice(currentQuestion)">
+            {{ isSingleChoice(currentQuestion) ? 'Chọn 1 đáp án' : 'Chọn nhiều đáp án' }}
+          </span>
+        </div>
+        
+        <div class="options-list">
+          <!-- Single Choice (Radio) -->
+          <ng-container *ngIf="isSingleChoice(currentQuestion)">
+            <label *ngFor="let option of currentQuestion.options; let i = index" 
+                   class="option-item"
+                   [class.selected]="isOptionSelected(i)">
+              <input 
+                type="radio" 
+                [name]="'question-' + currentQuestionIndex" 
+                [value]="i"
+                [checked]="userAnswers[currentQuestionIndex] === i"
+                (change)="onSingleChoiceChange(i)"
+                class="option-input"
+              >
+              <span class="option-content">
+                <strong class="option-letter">{{ getChar(65 + i) }}.</strong> 
+                <span class="option-text">{{ option }}</span>
+              </span>
+            </label>
+          </ng-container>
+
+          <!-- Multiple Choice (Checkbox) -->
+          <ng-container *ngIf="!isSingleChoice(currentQuestion)">
+            <label *ngFor="let option of currentQuestion.options; let i = index" 
+                   class="option-item"
+                   [class.selected]="isOptionSelected(i)">
+              <input 
+                type="checkbox" 
+                [checked]="isOptionSelected(i)"
+                (change)="onMultipleChoiceChange(i, $event)"
+                class="option-input"
+              >
+              <span class="option-content">
+                <strong class="option-letter">{{ getChar(65 + i) }}.</strong> 
+                <span class="option-text">{{ option }}</span>
+              </span>
+            </label>
+          </ng-container>
+        </div>
+        
+        <div class="navigation-buttons">
+          <button 
+            class="btn btn-outline" 
+            (click)="previousQuestion()"
+            [disabled]="currentQuestionIndex === 0"
+          >
+            ← Câu trước
+          </button>
+          
+          <div class="nav-right">
+            <button 
+              *ngIf="currentQuestionIndex < questions.length - 1 && completionPercentage !== 100"
+              class="btn btn-primary" 
+              (click)="nextQuestion()"
+            >
+              Câu tiếp →
+            </button>
+            
+            <button 
+              *ngIf="completionPercentage === 100"
+              class="btn btn-secondary" 
+              (click)="finishQuiz()"
+            >
+              Hoàn thành
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Review Mode -->
+<div class="container py-8" *ngIf="mode === 'review'">
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold mb-4">Xem lại bài làm</h1>
+    <div *ngIf="reviewResult" class="text-6xl mb-4"
+         [class.text-success]="reviewResult.score >= 0.8"
+         [class.text-warning]="reviewResult.score >= 0.5 && reviewResult.score < 0.8"
+         [class.text-error]="reviewResult.score < 0.5">
+      {{ (reviewResult.score * 100) | number:'1.0-0' }}%
+    </div>
+    <div *ngIf="reviewResult" class="text-xl font-semibold mb-2">
+      {{ reviewResult.score * reviewResult.totalQuestions | number:'1.0-0' }} / {{ reviewResult.totalQuestions }} câu đúng
+    </div>
+    <div *ngIf="reviewResult" class="text-gray-600">
+      Thời gian làm bài: {{ formatTime(reviewResult.timeSpent) }}
+    </div>
+  </div>
+
+  <div *ngIf="reviewResult" class="grid grid-cols-3 md:grid-cols-3 gap-6 mb-8">
+    <div class="card text-center">
+      <div class="text-2xl font-bold text-success mb-2">{{ getCorrectAnswersCount() }}</div>
+      <div class="text-gray-600">Câu đúng</div>
+    </div>
+    <div class="card text-center">
+      <div class="text-2xl font-bold text-error mb-2">{{ getIncorrectAnswersCount() }}</div>
+      <div class="text-gray-600">Câu sai</div>
+    </div>
+    <div class="card text-center">
+      <div class="text-2xl font-bold text-warning mb-2">{{ getUnansweredCount() }}</div>
+      <div class="text-gray-600">Chưa trả lời</div>
+    </div>
+  </div>
+
+  <div class="card mb-6">
+    <h2 class="text-lg font-semibold mb-4">Chi tiết từng câu</h2>
+    <div class="space-y-4">
+      <div *ngFor="let question of questions; let i = index" 
+           class="border rounded-lg p-4"
+           [class.border-success]="reviewResult && isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+           [class.bg-green-50]="reviewResult && isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+           [class.border-error]="reviewResult && reviewResult.userAnswers[i] !== null && !isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+           [class.bg-red-50]="reviewResult && reviewResult.userAnswers[i] !== null && !isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+           [class.border-warning]="reviewResult && reviewResult.userAnswers[i] === null"
+           [class.bg-yellow-50]="reviewResult && reviewResult.userAnswers[i] === null">
+        
+        <div class="flex items-start gap-3 mb-3">
+          <div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
+               [class.bg-success]="reviewResult && isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+               [class.text-white]="reviewResult && isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+               [class.bg-error]="reviewResult && reviewResult.userAnswers[i] !== null && !isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+               [class.text-white]="reviewResult && reviewResult.userAnswers[i] !== null && !isAnswerCorrect(reviewResult.userAnswers[i], question.correctAnswer)"
+               [class.bg-warning]="reviewResult && reviewResult.userAnswers[i] === null"
+               [class.text-white]="reviewResult && reviewResult.userAnswers[i] === null">
+            {{ i + 1 }}
+          </div>
+          <div class="flex-1">
+            <h4 class="font-medium mb-2">{{ question.content }}</h4>
+            <div class="mb-2">
+              <span class="type-badge" [class.single-choice]="isSingleChoice(question)" [class.multiple-choice]="!isSingleChoice(question)">
+                {{ isSingleChoice(question) ? 'Chọn 1 đáp án' : 'Chọn nhiều đáp án' }}
+              </span>
+            </div>
+            <div class="space-y-1">
+              <div *ngFor="let option of question.options; let j = index" 
+                   class="text-sm px-2 py-1 rounded flex items-center gap-2"
+                   [class.bg-success]="isCorrectOption(j, question.correctAnswer)"
+                   [class.text-white]="isCorrectOption(j, question.correctAnswer)"
+                   [class.bg-error]="reviewResult && isUserSelectedOption(j, reviewResult.userAnswers[i]) && !isCorrectOption(j, question.correctAnswer)"
+                   [class.text-white]="reviewResult && isUserSelectedOption(j, reviewResult.userAnswers[i]) && !isCorrectOption(j, question.correctAnswer)">
+                {{ getChar(65 + j) }}. {{ option }}
+                <span *ngIf="isCorrectOption(j, question.correctAnswer)" class="ml-2">✓ Đáp án đúng</span>
+                <span *ngIf="reviewResult && isUserSelectedOption(j, reviewResult.userAnswers[i]) && !isCorrectOption(j, question.correctAnswer)" class="ml-2">✗ Bạn chọn</span>
+              </div>
+            </div>
+            <div *ngIf="reviewResult && reviewResult.userAnswers[i] === null" class="text-warning text-sm mt-2">
+              Chưa trả lời
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center">
+    <button class="btn btn-primary mr-3" (click)="goHome()">
+      Về trang chủ
+    </button>
+    <button class="btn btn-outline" (click)="goBackToStudy()">
+      Quay lại
+    </button>
+  </div>
+</div>
+
+<!-- Results Screen -->
+<div class="container py-8" *ngIf="showResults">
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold mb-4">Kết quả bài làm</h1>
+    <div class="text-6xl mb-4"
+         [class.text-success]="score >= 0.8"
+         [class.text-warning]="score >= 0.5 && score < 0.8"
+         [class.text-error]="score < 0.5">
+      {{ (score * 100) | number:'1.0-0' }}%
+    </div>
+    <div class="text-xl font-semibold mb-2">
+      {{ correctAnswers }} / {{ questions.length }} câu đúng
+    </div>
+    <div class="text-gray-600">
+      Thời gian làm bài: {{ formatTime(timeSpent) }}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="card text-center">
+      <div class="text-2xl font-bold text-success mb-2">{{ correctAnswers }}</div>
+      <div class="text-gray-600">Câu đúng</div>
+    </div>
+    <div class="card text-center">
+      <div class="text-2xl font-bold text-error mb-2">{{ questions.length - correctAnswers }}</div>
+      <div class="text-gray-600">Câu sai</div>
+    </div>
+    <div class="card text-center">
+      <div class="text-2xl font-bold text-warning mb-2">{{ unansweredCount }}</div>
+      <div class="text-gray-600">Chưa trả lời</div>
+    </div>
+  </div>
+
+  <div class="card mb-6">
+    <h2 class="text-lg font-semibold mb-4">Chi tiết từng câu</h2>
+    <div class="space-y-4">
+      <div *ngFor="let question of questions; let i = index" 
+           class="border rounded-lg p-4"
+           [class.border-success]="isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+           [class.bg-green-50]="isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+           [class.border-error]="userAnswers[i] !== null && !isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+           [class.bg-red-50]="userAnswers[i] !== null && !isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+           [class.border-warning]="userAnswers[i] === null"
+           [class.bg-yellow-50]="userAnswers[i] === null">
+        
+        <div class="flex items-start gap-3 mb-3">
+          <div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
+               [class.bg-success]="isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+               [class.text-white]="isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+               [class.bg-error]="userAnswers[i] !== null && !isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+               [class.text-white]="userAnswers[i] !== null && !isAnswerCorrect(userAnswers[i], question.correctAnswer)"
+               [class.bg-warning]="userAnswers[i] === null"
+               [class.text-white]="userAnswers[i] === null">
+            {{ i + 1 }}
+          </div>
+          <div class="flex-1">
+            <h4 class="font-medium mb-2">{{ question.content }}</h4>
+            <div class="mb-2">
+              <span class="type-badge" [class.single-choice]="isSingleChoice(question)" [class.multiple-choice]="!isSingleChoice(question)">
+                {{ isSingleChoice(question) ? 'Chọn 1 đáp án' : 'Chọn nhiều đáp án' }}
+              </span>
+            </div>
+            <div class="space-y-1">
+              <div *ngFor="let option of question.options; let j = index" 
+                   class="text-sm px-2 py-1 rounded flex items-center gap-2"
+                   [class.bg-success]="isCorrectOption(j, question.correctAnswer)"
+                   [class.text-white]="isCorrectOption(j, question.correctAnswer)"
+                   [class.bg-error]="isUserSelectedOption(j, userAnswers[i]) && !isCorrectOption(j, question.correctAnswer)"
+                   [class.text-white]="isUserSelectedOption(j, userAnswers[i]) && !isCorrectOption(j, question.correctAnswer)">
+                {{ getChar(65 + j) }}. {{ option }}
+                <span *ngIf="isCorrectOption(j, question.correctAnswer)" class="ml-2">✓ Đáp án đúng</span>
+                <span *ngIf="isUserSelectedOption(j, userAnswers[i]) && !isCorrectOption(j, question.correctAnswer)" class="ml-2">✗ Bạn chọn</span>
+              </div>
+            </div>
+            <div *ngIf="userAnswers[i] === null" class="text-warning text-sm mt-2">
+              Chưa trả lời
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center">
+    <button class="btn btn-primary mr-3" (click)="goHome()">
+      Về trang chủ
+    </button>
+    <button class="btn btn-outline" (click)="retakeQuiz()">
+      Làm lại
+    </button>
+  </div>
+</div>

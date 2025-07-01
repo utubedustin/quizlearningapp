@@ -9,15 +9,19 @@
             <li>• Làm xong sẽ có báo cáo kết quả chi tiết</li>
             <li>• Kết quả mới sẽ ghi đè lên kết quả cũ</li>
             <li>• Có thể làm lại nhiều lần để cải thiện điểm số</li>
+            <li>• <strong>Đề "Học lại câu sai"</strong> chứa các câu đã trả lời sai, sẽ tự động loại bỏ câu khi trả lời đúng</li>
           </ul>
         </div>
       </div>
 
       <div class="study-grid">
-        <div *ngFor="let set of studySets" class="study-card">
+        <div *ngFor="let set of studySets" class="study-card" [class.wrong-answers-card]="set._id === 'wrong-answers-set'">
           <div class="card-header">
             <div class="card-title">
-              <h3 class="set-name">{{ set.name }}</h3>
+              <h3 class="set-name">
+                {{ set.name }}
+                <span *ngIf="set._id === 'wrong-answers-set'" class="wrong-answers-badge">🔄</span>
+              </h3>
               <p class="set-info">{{ set.questions.length }} câu hỏi</p>
             </div>
             <div class="card-score">
@@ -56,6 +60,7 @@
                 <span
                   *ngFor="let category of getCategories(set)"
                   class="category-tag"
+                  [class.wrong-answers-tag]="set._id === 'wrong-answers-set'"
                 >
                   {{ category }}
                 </span>
@@ -75,6 +80,7 @@
                     result.score >= 0.5 && result.score < 0.8
                   "
                   [class.progress-poor]="result.score < 0.5"
+                  [class.progress-wrong-answers]="set._id === 'wrong-answers-set'"
                 ></div>
               </div>
             </div>
@@ -84,11 +90,13 @@
             <!-- Bắt đầu - when never attempted -->
             <button
               *ngIf="!getSetResult(set._id)"
-              class="action-btn btn-start"
+              class="action-btn"
+              [class.btn-start]="set._id !== 'wrong-answers-set'"
+              [class.btn-wrong-answers]="set._id === 'wrong-answers-set'"
               (click)="startStudySet(set)"
             >
-              <span class="btn-icon">🚀</span>
-              <span class="btn-text">Bắt đầu</span>
+              <span class="btn-icon">{{ set._id === 'wrong-answers-set' ? '🔄' : '🚀' }}</span>
+              <span class="btn-text">{{ set._id === 'wrong-answers-set' ? 'Học lại' : 'Bắt đầu' }}</span>
             </button>
 
             <!-- Xem lại và Làm lại - when already attempted -->
@@ -102,11 +110,24 @@
               </button>
 
               <button
-                class="action-btn btn-retake"
+                class="action-btn"
+                [class.btn-retake]="set._id !== 'wrong-answers-set'"
+                [class.btn-wrong-answers]="set._id === 'wrong-answers-set'"
                 (click)="confirmRetakeStudySet(set)"
               >
                 <span class="btn-icon">🔄</span>
                 <span class="btn-text">Làm lại</span>
+              </button>
+            </div>
+
+            <!-- Nút xóa đề câu sai -->
+            <div *ngIf="set._id === 'wrong-answers-set'" class="mt-2">
+              <button
+                class="action-btn btn-clear-wrong"
+                (click)="confirmClearWrongAnswers()"
+              >
+                <span class="btn-icon">🗑️</span>
+                <span class="btn-text">Xóa đề này</span>
               </button>
             </div>
           </div>

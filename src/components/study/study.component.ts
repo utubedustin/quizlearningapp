@@ -38,6 +38,12 @@ export class StudyComponent implements OnInit {
       this.studyResults = results.filter((r) => r.mode === "study");
       console.log("Study results filtered:", this.studyResults.length);
     });
+
+    // Listen for wrong answers changes to update study sets
+    this.questionService.getWrongAnswers().subscribe((wrongAnswers) => {
+      console.log("Wrong answers updated:", wrongAnswers.length);
+      this.studySets = this.questionService.createStudySets();
+    });
   }
 
   getSetResult(setId: string): QuizResult | undefined {
@@ -57,6 +63,10 @@ export class StudyComponent implements OnInit {
   }
 
   getCategories(set: QuizSet): string[] {
+    if (set._id === 'wrong-answers-set') {
+      return ['Câu hỏi sai'];
+    }
+
     const categories = set.questions
       .map((q) => q.category)
       .filter(Boolean)
@@ -93,19 +103,49 @@ export class StudyComponent implements OnInit {
   }
 
   async confirmRetakeStudySet(set: QuizSet) {
+    const isWrongAnswersSet = set._id === 'wrong-answers-set';
+    const title = isWrongAnswersSet ? "Học lại câu sai" : "Làm lại bài học";
+    const message = isWrongAnswersSet 
+      ? `Bạn có chắc chắn muốn học lại các câu sai?\n\nCác câu trả lời đúng sẽ được loại bỏ khỏi đề này.`
+      : `Bạn có chắc chắn muốn làm lại "${set.name}"?\n\nKết quả hiện tại sẽ bị xóa và bạn sẽ bắt đầu làm bài từ đầu.`;
+
     const confirmed = await this.dialogService.confirm({
-      title: "Làm lại bài học",
-      message: `Bạn có chắc chắn muốn làm lại "${set.name}"?\n\nKết quả hiện tại sẽ bị xóa và bạn sẽ bắt đầu làm bài từ đầu.`,
+      title,
+      message,
       confirmText: "Làm lại",
       cancelText: "Hủy",
     });
 
     if (confirmed) {
-      // Clear the previous result
+      // Clear the previous result and any saved progress
       this.questionService.clearStudySetResult(set._id);
 
-      // Start the quiz fresh
-      this.startStudySet(set);
+      // Navigate with retake flag to ensure fresh start
+      this.router.navigate(["/quiz"], {
+        queryParams: {
+          mode: "study",
+          setId: set._id,
+          questions: JSON.stringify(set.questions.map((q) => q._id)),
+          retake: "true"
+        },
+      });
+    }
+  }
+
+  async confirmClearWrongAnswers() {
+    const confirmed = await this.dialogService.confirm({
+      title: "Xóa đề câu hỏi sai",
+      message: "Bạn có chắc chắn muốn xóa toàn bộ đề 'Học lại câu sai'?\n\nHành động này không thể hoàn tác.",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+    });
+
+    if (confirmed) {
+      this.questionService.clearWrongAnswers();
+      this.questionService.clearStudySetResult('wrong-answers-set');
+      
+      // Refresh study sets
+      this.studySets = this.questionService.createStudySets();
     }
   }
 }
