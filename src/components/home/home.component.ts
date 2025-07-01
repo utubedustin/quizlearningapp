@@ -26,7 +26,7 @@ export class HomeComponent {
   private loadStats() {
     this.questionService.getQuestions().subscribe(questions => {
       this.totalQuestions = questions.length;
-      this.studySets = Math.ceil(questions.length / 10);
+      this.studySets = Math.ceil(questions.length / 20);
     });
 
     this.questionService.getQuizResults().subscribe(results => {
