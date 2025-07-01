@@ -211,6 +211,7 @@ export class ResultsComponent implements OnInit {
 
   ngOnInit() {
     this.questionService.getQuizResults().subscribe(results => {
+      console.log('Quiz results:', results);
       this.allResults = results;
       this.studyResults = results.filter(r => r.mode === 'study');
       this.practiceResults = results.filter(r => r.mode === 'practice')

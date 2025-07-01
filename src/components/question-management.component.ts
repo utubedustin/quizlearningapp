@@ -5,11 +5,13 @@ import { QuestionService } from "../services/question.service";
 import { MongoDBService } from "../services/mongodb.service";
 import { Question } from "../models/question.model";
 import { DialogService } from "../services/dialog.service";
+import { HttpClientModule, HttpClient } from "@angular/common/http";
+import { environment } from "../environments/environment";
 
 @Component({
   selector: "app-question-management",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   template: `
     <div class="container py-8">
       <div class="flex justify-between items-center mb-6">
@@ -34,7 +36,7 @@ import { DialogService } from "../services/dialog.service";
           </div>
 
           <button class="btn btn-secondary" (click)="openImportDialog()">
-            Import PDF
+            Import JSON
           </button>
           <button class="btn btn-primary" (click)="openAddDialog()">
             Thêm câu hỏi
@@ -61,28 +63,18 @@ import { DialogService } from "../services/dialog.service";
               {{ category }}
             </option>
           </select>
-          <select
-            [(ngModel)]="filterDifficulty"
-            (ngModelChange)="filterQuestions()"
-            class="select"
-          >
-            <option value="">Tất cả độ khó</option>
-            <option value="easy">Dễ</option>
-            <option value="medium">Trung bình</option>
-            <option value="hard">Khó</option>
-          </select>
         </div>
       </div>
 
       <div class="grid gap-4">
         <div
-          *ngFor="let question of filteredQuestions; let i = index"
+          *ngFor="let question of paginatedQuestions; let i = index"
           class="card"
         >
           <div class="flex justify-between items-start gap-4">
             <div class="flex-1">
               <h3 class="font-semibold mb-2">
-                {{ i + 1 }}. {{ question.content }}
+              {{ (currentPage - 1) * pageSize + i + 1 }}. {{ question.content }}
               </h3>
               <div class="grid gap-1 mb-3">
                 <div
@@ -99,9 +91,6 @@ import { DialogService } from "../services/dialog.service";
                 <span class="px-2 py-1 bg-gray-100 rounded">{{
                   question.category || "Chưa phân loại"
                 }}</span>
-                <span class="px-2 py-1 bg-gray-100 rounded">{{
-                  getDifficultyText(question.difficulty)
-                }}</span>
                 <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded">
                   {{ question.createdAt | date : "dd/MM/yyyy" }}
                 </span>
@@ -116,7 +105,7 @@ import { DialogService } from "../services/dialog.service";
               </button>
               <button
                 class="btn btn-danger btn-sm"
-                (click)="confirmDeleteQuestion(question.id)"
+                (click)="confirmDeleteQuestion(question._id)"
               >
                 Xóa
               </button>
@@ -125,6 +114,26 @@ import { DialogService } from "../services/dialog.service";
         </div>
       </div>
 
+      <div
+            class="flex justify-center items-center gap-4 mt-4"
+            *ngIf="totalPages > 1"
+          >
+            <button
+              class="btn btn-sm"
+              (click)="changePage(-1)"
+              [disabled]="currentPage === 1"
+            >
+              ⬅️ Trước
+            </button>
+            <span>Trang {{ currentPage }} / {{ totalPages }}</span>
+            <button
+              class="btn btn-sm"
+              (click)="changePage(1)"
+              [disabled]="currentPage === totalPages"
+            >
+              Tiếp ➡️
+            </button>
+          </div>
       <div
         *ngIf="filteredQuestions.length === 0"
         class="text-center py-8 text-gray-500"
@@ -207,14 +216,6 @@ import { DialogService } from "../services/dialog.service";
                 ></option>
               </datalist>
             </div>
-            <div class="form-group">
-              <label class="form-label">Độ khó</label>
-              <select [(ngModel)]="questionForm.difficulty" class="select">
-                <option value="easy">Dễ</option>
-                <option value="medium">Trung bình</option>
-                <option value="hard">Khó</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -229,7 +230,7 @@ import { DialogService } from "../services/dialog.service";
       </div>
     </div>
 
-    <!-- Import PDF Dialog -->
+    <!-- Import JSON Dialog -->
     <div
       *ngIf="showImportDialog"
       class="dialog-overlay"
@@ -237,13 +238,13 @@ import { DialogService } from "../services/dialog.service";
     >
       <div class="dialog-content dialog-lg" (click)="$event.stopPropagation()">
         <div class="dialog-header">
-          <h2 class="text-xl font-bold">Import câu hỏi từ PDF</h2>
+          <h2 class="text-xl font-bold">Import câu hỏi từ JSON</h2>
           <button class="dialog-close" (click)="closeImportDialog()">×</button>
         </div>
 
         <div class="dialog-body">
           <div class="form-group">
-            <label class="form-label">Chọn file PDF</label>
+            <label class="form-label">Chọn file JSON</label>
             <div
               class="file-upload-area"
               [class.drag-over]="isDragOver"
@@ -256,26 +257,34 @@ import { DialogService } from "../services/dialog.service";
                 <div class="file-upload-icon">📄</div>
                 <div class="file-upload-text">
                   <div *ngIf="!selectedFile" class="file-upload-primary">
-                    Kéo thả file PDF vào đây hoặc click để chọn
+                    Kéo thả file JSON vào đây hoặc click để chọn
                   </div>
                   <div *ngIf="selectedFile" class="file-upload-primary">
                     {{ selectedFile.name }}
                   </div>
                   <div class="file-upload-secondary">
-                    Hỗ trợ file PDF có định dạng câu hỏi trắc nghiệm tiếng Việt
+                    Hỗ trợ định dạng JSON chuẩn đã được xử lý từ file Python
                   </div>
                 </div>
               </div>
               <input
                 #fileInput
                 type="file"
-                accept=".pdf"
+                accept=".json"
                 (change)="onFileSelected($event)"
                 class="file-input-hidden"
               />
             </div>
           </div>
-
+          <div class="form-group">
+            <label class="form-label">Danh mục (Category)</label>
+            <select class="select" [(ngModel)]="selectedImportCategory">
+              <option value="">-- Chọn danh mục --</option>
+              <option value="Tin A">Tin A</option>
+              <option value="Tin B">Tin B</option>
+            </select>
+          </div>
+          <!-- Import Progress -->
           <div *ngIf="isProcessing" class="processing-status">
             <div class="processing-spinner"></div>
             <div class="processing-text">{{ processingMessage }}</div>
@@ -292,27 +301,19 @@ import { DialogService } from "../services/dialog.service";
             <h3 class="results-title">Kết quả import</h3>
             <div class="results-summary">
               <div class="result-item success">
-                <span class="result-icon">✅</span>
-                <span
-                  >{{ importResults.questions.length }} câu hỏi được thêm</span
-                >
+                ✅ {{ importResults.questionsImported }} câu hỏi được thêm
               </div>
               <div
                 *ngIf="importResults.duplicatesFound > 0"
                 class="result-item warning"
               >
-                <span class="result-icon">⚠️</span>
-                <span
-                  >{{ importResults.duplicatesFound }} câu hỏi trùng lặp (bỏ
-                  qua)</span
-                >
+                ⚠️ {{ importResults.duplicatesFound }} câu hỏi trùng lặp
               </div>
               <div
                 *ngIf="importResults.errors.length > 0"
                 class="result-item error"
               >
-                <span class="result-icon">❌</span>
-                <span>{{ importResults.errors.length }} lỗi xảy ra</span>
+                ❌ {{ importResults.errors.length }} lỗi xảy ra
               </div>
             </div>
 
@@ -332,8 +333,10 @@ import { DialogService } from "../services/dialog.service";
           <button
             *ngIf="!importResults"
             class="btn btn-primary"
-            (click)="confirmProcessPDF()"
-            [disabled]="!selectedFile || isProcessing"
+            (click)="confirmProcessJSON()"
+            [disabled]="
+              !selectedFile || !selectedImportCategory || isProcessing
+            "
           >
             <span *ngIf="!isProcessing">Import</span>
             <span *ngIf="isProcessing">Đang xử lý...</span>
@@ -409,10 +412,6 @@ import { DialogService } from "../services/dialog.service";
 
       .result-item.error {
         color: #dc2626;
-      }
-
-      .result-icon {
-        font-size: 1rem;
       }
 
       .error-details {
@@ -519,7 +518,7 @@ import { DialogService } from "../services/dialog.service";
 
       .form-row {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 1rem;
       }
 
@@ -651,7 +650,6 @@ export class QuestionManagementComponent implements OnInit {
 
   searchTerm = "";
   filterCategory = "";
-  filterDifficulty = "";
 
   showQuestionDialog = false;
   showImportDialog = false;
@@ -671,15 +669,16 @@ export class QuestionManagementComponent implements OnInit {
     options: ["", "", "", ""],
     correctAnswer: 0,
     category: "",
-    difficulty: "medium" as "easy" | "medium" | "hard",
   };
 
   editingQuestionId: string | null = null;
+  selectedImportCategory: string = "";
 
   constructor(
     private questionService: QuestionService,
     private mongoService: MongoDBService,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private http: HttpClient
   ) {}
 
   ngOnInit() {
@@ -694,12 +693,29 @@ export class QuestionManagementComponent implements OnInit {
       } else {
         this.mongoConfig.isConnected = false;
       }
-    }); 
-    this.mongoService.config$.subscribe((config) => { 
+    });
+    this.mongoService.config$.subscribe((config) => {
       this.mongoConfig = config;
     });
   }
+  pageSize = 10;
+  currentPage = 1;
 
+  get totalPages() {
+    return Math.ceil(this.filteredQuestions.length / this.pageSize);
+  }
+
+  get paginatedQuestions() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredQuestions.slice(start, start + this.pageSize);
+  }
+
+  changePage(delta: number) {
+    const newPage = this.currentPage + delta;
+    if (newPage >= 1 && newPage <= this.totalPages) {
+      this.currentPage = newPage;
+    }
+  }
   private updateCategories() {
     const categorySet = new Set(
       this.questions.map((q) => q.category).filter(Boolean)
@@ -719,10 +735,8 @@ export class QuestionManagementComponent implements OnInit {
 
       const matchesCategory =
         !this.filterCategory || question.category === this.filterCategory;
-      const matchesDifficulty =
-        !this.filterDifficulty || question.difficulty === this.filterDifficulty;
 
-      return matchesSearch && matchesCategory && matchesDifficulty;
+      return matchesSearch && matchesCategory;
     });
   }
 
@@ -739,9 +753,8 @@ export class QuestionManagementComponent implements OnInit {
       options: [...question.options],
       correctAnswer: question.correctAnswer,
       category: question.category || "",
-      difficulty: question.difficulty || "medium",
     };
-    this.editingQuestionId = question.id;
+    this.editingQuestionId = question._id;
     this.showQuestionDialog = true;
   }
 
@@ -813,7 +826,6 @@ export class QuestionManagementComponent implements OnInit {
       options: ["", "", "", ""],
       correctAnswer: 0,
       category: "",
-      difficulty: "medium",
     };
   }
 
@@ -836,12 +848,12 @@ export class QuestionManagementComponent implements OnInit {
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
-    if (file && file.type === "application/pdf") {
+    if (file && file.type === "application/json") {
       this.selectedFile = file;
     } else {
       this.dialogService.confirm({
         title: "File không hợp lệ",
-        message: "Vui lòng chọn file PDF.",
+        message: "Vui lòng chọn file JSON.",
         confirmText: "Đã hiểu",
         cancelText: "",
       });
@@ -866,12 +878,12 @@ export class QuestionManagementComponent implements OnInit {
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.type === "application/pdf") {
+      if (file.type === "application/json") {
         this.selectedFile = file;
       } else {
         this.dialogService.confirm({
           title: "File không hợp lệ",
-          message: "Vui lòng chọn file PDF.",
+          message: "Vui lòng chọn file JSON.",
           confirmText: "Đã hiểu",
           cancelText: "",
         });
@@ -879,85 +891,123 @@ export class QuestionManagementComponent implements OnInit {
     }
   }
 
-  async confirmProcessPDF() {
+  async confirmProcessJSON() {
     if (!this.selectedFile) return;
 
     const confirmed = await this.dialogService.confirm({
-      title: "Import câu hỏi từ PDF",
-      message: `Bạn có muốn import câu hỏi từ file "${this.selectedFile.name}"?\n\nHệ thống sẽ tự động phát hiện và bỏ qua các câu hỏi trùng lặp.`,
+      title: "Import câu hỏi từ JSON",
+      message: `Bạn có muốn import từ file "${this.selectedFile.name}"?`,
       confirmText: "Import",
       cancelText: "Hủy",
     });
 
     if (confirmed) {
-      this.processPDF();
+      this.processJSON();
     }
   }
 
-  async processPDF() {
+  async processJSON() {
     if (!this.selectedFile) return;
 
     this.isProcessing = true;
     this.processingProgress = 0;
-    this.processingMessage = "Đang đọc file PDF...";
+    this.processingMessage = "Đang đọc file JSON...";
 
-    // Simulate progress updates
-    const progressInterval = setInterval(() => {
-      if (this.processingProgress < 90) {
-        this.processingProgress += 10;
-
-        if (this.processingProgress === 20) {
-          this.processingMessage = "Đang trích xuất văn bản...";
-        } else if (this.processingProgress === 40) {
-          this.processingMessage = "Đang phân tích câu hỏi...";
-        } else if (this.processingProgress === 60) {
-          this.processingMessage = "Đang kiểm tra trùng lặp...";
-        } else if (this.processingProgress === 80) {
-          this.processingMessage = "Đang lưu vào cơ sở dữ liệu...";
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const jsonText = reader.result as string;
+        const parsed = JSON.parse(jsonText);
+        
+        for (const key in parsed) {
+          if (parsed.hasOwnProperty(key)) {
+            parsed[key].category = this.selectedImportCategory || "Chưa phân loại";
+          }
         }
-      }
-    }, 300);
+        
+        this.processingProgress = 20;
+        this.processingMessage = "Đang gửi dữ liệu đến server...";
 
-    try {
-      const result = await this.questionService.processPDFFile(
-        this.selectedFile
-      );
+        // Send JSON data to backend API
+        const response = await this.http
+          .post<any>(`${environment.api.baseUrl}/questions/import-json`, parsed)
+          .toPromise();
 
-      this.processingProgress = 100;
-      this.processingMessage = "Hoàn thành!";
+        this.processingProgress = 80;
+        this.processingMessage = "Đang xử lý phản hồi từ server...";
 
-      setTimeout(() => {
+        // Log response for debugging
+        console.log("API Response:", response);
+
+        // Ensure questionsImported is an array
+        let questionsImported: any[] = [];
+        if (Array.isArray(response.questionsImported)) {
+          questionsImported = response.questionsImported;
+        } else if (
+          response.questionsImported &&
+          typeof response.questionsImported === "object"
+        ) {
+          // Handle object format (e.g., from Python script)
+          questionsImported = Object.values(response.questionsImported).flatMap(
+            (q: any) =>
+              Object.entries(q).map(([key, value]: [string, any]) => ({
+                id: key,
+                content: value[0]?.[5] || "", // Extract content from Python JSON
+                options:
+                  response.answers?.[key]?.options?.map((opt: any) => opt[5]) ||
+                  [],
+                correctAnswer: response.correct_options?.[key]
+                  ? response.answers?.[key]?.options?.findIndex(
+                      (opt: any) => opt[5] === response.correct_options[key]
+                    )
+                  : 0,
+                category: this.selectedImportCategory || "Chưa phân loại",
+                createdAt: new Date(),
+              }))
+          );
+        } else {
+          console.error("Invalid questionsImported format:", questionsImported);
+          throw new Error("questionsImported is not in a valid format");
+        }
+
+        // Update questions list
+        this.questions = [...this.questions, ...questionsImported];
+        this.filteredQuestions = this.questions;
+        this.updateCategories();
+
+        this.processingProgress = 100;
+        this.processingMessage = "Hoàn thành!";
+        this.importResults = {
+          questionsImported: questionsImported.length,
+          duplicatesFound: response.duplicatesFound || 0,
+          errors: response.errors || [],
+        };
+      } catch (error: any) {
+        console.error("Import Error:", error);
+        await this.dialogService.confirm({
+          title: "Lỗi import",
+          message:
+            error.message || "Không thể import file JSON. Vui lòng thử lại.",
+          confirmText: "Đóng",
+          cancelText: "",
+        });
+      } finally {
         this.isProcessing = false;
-        this.importResults = result;
-        clearInterval(progressInterval);
-      }, 500);
-    } catch (error) {
-      clearInterval(progressInterval);
-      this.isProcessing = false;
-
+      }
+    };
+    reader.onerror = async () => {
       await this.dialogService.confirm({
-        title: "Lỗi import",
-        message: "Có lỗi xảy ra khi xử lý file PDF. Vui lòng thử lại.",
+        title: "Lỗi đọc file",
+        message: "Không thể đọc file JSON. Vui lòng thử lại.",
         confirmText: "Đóng",
         cancelText: "",
       });
-    }
+      this.isProcessing = false;
+    };
+    reader.readAsText(this.selectedFile);
   }
 
   getChar(code: number): string {
     return String.fromCharCode(code);
-  }
-
-  getDifficultyText(difficulty?: string): string {
-    switch (difficulty) {
-      case "easy":
-        return "Dễ";
-      case "medium":
-        return "Trung bình";
-      case "hard":
-        return "Khó";
-      default:
-        return "Trung bình";
-    }
   }
 }

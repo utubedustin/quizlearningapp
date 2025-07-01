@@ -81,7 +81,7 @@ export class MongoDBService {
       );
   }
 
-  addQuestion(question: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>): Observable<Question> {
+  addQuestion(question: Omit<Question, '_id' | 'createdAt' | 'updatedAt'>): Observable<Question> {
     return this.http.post<Question>(`${environment.api.baseUrl}/questions`, question, this.httpOptions)
       .pipe(
         catchError(this.handleError)

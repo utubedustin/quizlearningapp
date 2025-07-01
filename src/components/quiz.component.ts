@@ -161,7 +161,7 @@ import { Question } from '../models/question.model';
               
               <div class="nav-right">
                 <button 
-                  *ngIf="currentQuestionIndex < questions.length - 1"
+                  *ngIf="currentQuestionIndex < questions.length - 1 && completionPercentage !== 100"
                   class="btn btn-primary" 
                   (click)="nextQuestion()"
                 >
@@ -169,7 +169,7 @@ import { Question } from '../models/question.model';
                 </button>
                 
                 <button 
-                  *ngIf="currentQuestionIndex === questions.length - 1"
+                  *ngIf="completionPercentage === 100"
                   class="btn btn-secondary" 
                   (click)="finishQuiz()"
                 >
@@ -722,7 +722,7 @@ export class QuizComponent implements OnInit, OnDestroy {
       const questionIds = JSON.parse(params['questions'] || '[]');
       
       this.questionService.getQuestions().subscribe(allQuestions => {
-        this.questions = allQuestions.filter(q => questionIds.includes(q.id));
+        this.questions = allQuestions.filter(q => questionIds.includes(q._id));
         this.userAnswers = new Array(this.questions.length).fill(null);
         
         if (this.timeLimit > 0) {

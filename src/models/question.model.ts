@@ -1,5 +1,5 @@
 export interface Question {
-  id: string;
+  _id: string;
   content: string;
   options: string[];
   correctAnswer: number;
@@ -10,7 +10,7 @@ export interface Question {
 }
 
 export interface QuizSet {
-  id: string;
+  _id: string;
   name: string;
   questions: Question[];
   createdAt: Date;

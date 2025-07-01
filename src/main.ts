@@ -1,39 +1,62 @@
-import { Component } from '@angular/core';
-import { bootstrapApplication } from '@angular/platform-browser';
-import { RouterOutlet, RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { Component } from "@angular/core";
+import { bootstrapApplication } from "@angular/platform-browser";
+import { RouterOutlet, RouterModule } from "@angular/router";
+import { CommonModule } from "@angular/common";
+import { provideRouter } from "@angular/router";
+import { provideHttpClient } from "@angular/common/http";
 
-import { HeaderComponent } from './components/header.component';
-import { HomeComponent } from './components/home.component';
-import { QuestionManagementComponent } from './components/question-management.component';
-import { StudyComponent } from './components/study.component';
-import { PracticeComponent } from './components/practice.component';
-import { QuizComponent } from './components/quiz.component';
-import { ResultsComponent } from './components/results.component';
-import { ConfirmationDialogComponent } from './components/confirmation-dialog.component';
-import { DialogService, DialogState } from './services/dialog.service';
+import { HeaderComponent } from "./components/header.component";
+import { HomeComponent } from "./components/home.component";
+import { ConfirmationDialogComponent } from "./components/confirmation-dialog.component";
+import { DialogService, DialogState } from "./services/dialog.service";
 
 const routes = [
-  { path: '', component: HomeComponent },
-  { path: 'questions', component: QuestionManagementComponent },
-  { path: 'study', component: StudyComponent },
-  { path: 'practice', component: PracticeComponent },
-  { path: 'quiz', component: QuizComponent },
-  { path: 'results', component: ResultsComponent },
-  { path: '**', redirectTo: '' }
+  { path: "", component: HomeComponent },
+  {
+    path: "questions",
+    loadChildren: () =>
+      import("./components/question-management.routes").then((m) => m.default),
+  },
+
+  // Lazy loaded routes
+  {
+    path: "study",
+    loadChildren: () =>
+      import("./components/study.routes").then((m) => m.default),
+  },
+  {
+    path: "practice",
+    loadChildren: () =>
+      import("./components/practice.routes").then((m) => m.default),
+  },
+  {
+    path: "quiz",
+    loadChildren: () =>
+      import("./components/quiz.routes").then((m) => m.default),
+  },
+  {
+    path: "results",
+    loadChildren: () =>
+      import("./components/results.routes").then((m) => m.default),
+  },
+
+  { path: "**", redirectTo: "" },
 ];
 
 @Component({
-  selector: 'app-root',
+  selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, HeaderComponent, ConfirmationDialogComponent],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    HeaderComponent,
+    ConfirmationDialogComponent,
+  ],
   template: `
     <div class="min-h-screen bg-gray-50">
       <app-header></app-header>
       <router-outlet></router-outlet>
-      
+
       <!-- Global Confirmation Dialog -->
       <app-confirmation-dialog
         [isOpen]="dialogState.isOpen"
@@ -45,13 +68,13 @@ const routes = [
         (cancelled)="onDialogCancelled()"
       ></app-confirmation-dialog>
     </div>
-  `
+  `,
 })
 export class App {
-  dialogState: DialogState = { isOpen: false, config: { message: '' } };
+  dialogState: DialogState = { isOpen: false, config: { message: "" } };
 
   constructor(private dialogService: DialogService) {
-    this.dialogService.dialogState$.subscribe(state => {
+    this.dialogService.dialogState$.subscribe((state) => {
       this.dialogState = state;
     });
   }
@@ -66,8 +89,5 @@ export class App {
 }
 
 bootstrapApplication(App, {
-  providers: [
-    provideRouter(routes),
-    provideHttpClient()
-  ]
+  providers: [provideRouter(routes), provideHttpClient()],
 });

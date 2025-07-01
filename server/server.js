@@ -19,7 +19,11 @@ let client;
 
 async function connectToMongoDB() {
   try {
-    client = new MongoClient(MONGODB_URI);
+    client = new MongoClient(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      tls: true, // Required if not using +srv
+    });
     await client.connect();
     db = client.db("quiz-app");
     console.log("Connected to MongoDB successfully");
@@ -114,6 +118,69 @@ app.post("/api/questions/bulk", async (req, res) => {
     });
   } catch (error) {
     console.error("Error bulk creating questions:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Import JSON-formatted questions (from Python export)
+app.post("/api/questions/import-json", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: "Database not connected" });
+    }
+
+    const data = req.body;
+
+    if (!Array.isArray(data)) {
+      return res.status(400).json({ error: "Invalid JSON format. Must be an array of questions." });
+    }
+
+    const added = [];
+    const errors = [];
+    const now = new Date();
+
+    for (const [index, item] of data.entries()) {
+      const { question, options, correct_answers, category, difficulty = "medium" } = item;
+
+      if (
+        typeof question !== "string" ||
+        !Array.isArray(options) ||
+        !Array.isArray(correct_answers)
+      ) {
+        errors.push(`Câu ${index + 1} không hợp lệ`);
+        continue;
+      }
+
+      const correctIndex = options.findIndex((opt) =>
+        correct_answers.includes(opt)
+      );
+
+      if (correctIndex === -1) {
+        errors.push(`Câu ${index + 1} không tìm thấy đáp án đúng`);
+        continue;
+      }
+
+      added.push({
+        content: question,
+        options,
+        correctAnswer: correctIndex,
+        category,
+        difficulty,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    if (added.length > 0) {
+      await db.collection("questions").insertMany(added);
+    }
+
+    res.status(201).json({
+      addedCount: added.length,
+      errors,
+    });
+  } catch (error) {
+    console.error("Error importing JSON:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -280,7 +347,6 @@ app.get("/api/statistics", async (req, res) => {
         .toArray(),
     ]);
 
-    // Calculate average score
     const avgScore =
       recentResults.length > 0
         ? recentResults.reduce((sum, r) => sum + (r.score || 0), 0) /

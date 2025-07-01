@@ -21,11 +21,12 @@ import { ExamConfig } from '../models/question.model';
             <div class="space-y-4">
               <div>
                 <label class="block font-medium mb-2">Số lượng câu hỏi</label>
-                <select [(ngModel)]="examConfig.numberOfQuestions" class="select">
-                  <option [value]="10">10 câu</option>
-                  <option [value]="20">20 câu</option>
+                <select [(ngModel)]="examConfig.numberOfQuestions" class="select"> 
+                <option [value]="5">5 câu</option>
                   <option [value]="30">30 câu</option>
                   <option [value]="50">50 câu</option>
+                  <option [value]="60">60 câu</option>
+                  <option [value]="70">70 câu</option>
                   <option [value]="totalQuestions" *ngIf="totalQuestions > 0">
                     Tất cả ({{ totalQuestions }} câu)
                   </option>
@@ -166,7 +167,7 @@ export class PracticeComponent implements OnInit {
   practiceResults: any[] = [];
   
   examConfig: ExamConfig = {
-    numberOfQuestions: 20,
+    numberOfQuestions: 30,
     timeLimit: 30,
     randomize: true
   };
@@ -182,6 +183,7 @@ export class PracticeComponent implements OnInit {
     });
     
     this.questionService.getQuizResults().subscribe(results => {
+      console.log('Quiz results:', results);
       this.practiceResults = results.filter(r => r.mode === 'practice')
         .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
     });
@@ -193,7 +195,7 @@ export class PracticeComponent implements OnInit {
     this.router.navigate(['/quiz'], {
       queryParams: {
         mode: 'practice',
-        questions: JSON.stringify(questions.map(q => q.id)),
+        questions: JSON.stringify(questions.map(q => q._id)),
         timeLimit: this.examConfig.timeLimit
       }
     });
