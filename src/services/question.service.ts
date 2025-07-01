@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
-import { BehaviorSubject, Observable, of, forkJoin } from "rxjs";
-import { map, catchError, switchMap } from "rxjs/operators";
+import { BehaviorSubject, Observable, of, forkJoin, combineLatest } from "rxjs";
+import { map, catchError, switchMap, tap } from "rxjs/operators";
 import {
   Question,
   QuizSet,
@@ -17,6 +17,7 @@ export class QuestionService {
   private questionsSubject = new BehaviorSubject<Question[]>([]);
   private quizResultsSubject = new BehaviorSubject<QuizResult[]>([]);
   private studyResultsSubject = new BehaviorSubject<QuizResult[]>([]);
+  private isDataLoaded = false;
 
   questions$ = this.questionsSubject.asObservable();
   quizResults$ = this.quizResultsSubject.asObservable();
@@ -29,10 +30,15 @@ export class QuestionService {
   }
 
   private loadData() {
+    if (this.isDataLoaded) return;
+    
+    console.log('Loading data from services...');
+    
     // Load questions from MongoDB
     this.mongoService
       .getQuestions()
       .pipe(
+        tap(questions => console.log('Questions loaded from MongoDB:', questions.length)),
         catchError((error) => {
           console.error(
             "Failed to load questions from MongoDB, using localStorage:",
@@ -49,6 +55,7 @@ export class QuestionService {
     this.mongoService
       .getPracticeResults()
       .pipe(
+        tap(results => console.log('Practice results loaded from MongoDB:', results.length)),
         catchError((error) => {
           console.error(
             "Failed to load practice results from MongoDB, using localStorage:",
@@ -63,6 +70,7 @@ export class QuestionService {
 
     // Load study results from localStorage (as requested)
     this.loadStudyResultsFromLocalStorage();
+    this.isDataLoaded = true;
   }
 
   private loadQuestionsFromLocalStorage(): Observable<Question[]> {
@@ -81,6 +89,8 @@ export class QuestionService {
   private loadStudyResultsFromLocalStorage() {
     const saved = localStorage.getItem("study-results");
     const studyResults = saved ? JSON.parse(saved) : [];
+    console.log('Study results loaded from localStorage:', studyResults.length);
+    console.log('Study results data:', studyResults);
     this.studyResultsSubject.next(studyResults);
   }
 
@@ -111,7 +121,6 @@ export class QuestionService {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      // Add more mock questions as needed
     ];
   }
 
@@ -259,11 +268,14 @@ export class QuestionService {
   }
 
   saveQuizResult(result: Omit<QuizResult, "id">): void {
+    console.log('Saving quiz result:', result);
+    
     if (result.mode === "practice") {
       // Save practice results to MongoDB
       this.mongoService
         .savePracticeResult(result)
         .pipe(
+          tap(savedResult => console.log('Practice result saved to MongoDB:', savedResult)),
           catchError((error) => {
             console.error(
               "Failed to save practice result to MongoDB, saving to localStorage:",
@@ -309,6 +321,7 @@ export class QuestionService {
     );
     const updatedResults = [...filteredResults, newResult];
 
+    console.log('Saving study result to localStorage:', newResult);
     localStorage.setItem("study-results", JSON.stringify(updatedResults));
     this.studyResultsSubject.next(updatedResults);
   }
@@ -324,13 +337,22 @@ export class QuestionService {
   }
 
   getQuizResults(): Observable<QuizResult[]> {
-    // Combine practice results (from MongoDB) and study results (from localStorage)
-    return forkJoin([this.quizResults$, this.studyResults$]).pipe(
-      map(([practiceResults, studyResults]) => [
-        ...practiceResults,
-        ...studyResults,
-      ])
+    // Use combineLatest instead of forkJoin to get real-time updates
+    return combineLatest([this.quizResults$, this.studyResults$]).pipe(
+      map(([practiceResults, studyResults]) => {
+        console.log('Combined results - Practice:', practiceResults.length, 'Study:', studyResults.length);
+        const combined = [...practiceResults, ...studyResults];
+        console.log('Total combined results:', combined.length);
+        return combined;
+      })
     );
+  }
+
+  // Force refresh data
+  refreshData(): void {
+    console.log('Force refreshing data...');
+    this.isDataLoaded = false;
+    this.loadData();
   }
 
   // Get statistics

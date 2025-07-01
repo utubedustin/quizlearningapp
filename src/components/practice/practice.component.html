@@ -1,16 +1,4 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { QuestionService } from '../services/question.service';
-import { ExamConfig } from '../models/question.model';
-
-@Component({
-  selector: 'app-practice',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container py-8">
+<div class="container py-8">
       <h1 class="text-2xl font-bold mb-6">Luyện thi</h1>
       
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -79,7 +67,12 @@ import { ExamConfig } from '../models/question.model';
         
         <div class="lg:col-span-2">
           <div class="card">
-            <h2 class="text-lg font-semibold mb-4">Lịch sử luyện thi</h2>
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-lg font-semibold">Lịch sử luyện thi</h2>
+              <button class="btn btn-outline btn-sm" (click)="loadPracticeResults()">
+                🔄 Làm mới
+              </button>
+            </div>
             
             <div *ngIf="practiceResults.length === 0" class="text-center py-8 text-gray-500">
               Chưa có lần thi nào
@@ -160,62 +153,3 @@ import { ExamConfig } from '../models/question.model';
         </div>
       </div>
     </div>
-  `
-})
-export class PracticeComponent implements OnInit {
-  totalQuestions = 0;
-  practiceResults: any[] = [];
-  
-  examConfig: ExamConfig = {
-    numberOfQuestions: 30,
-    timeLimit: 30,
-    randomize: true
-  };
-
-  constructor(
-    private questionService: QuestionService,
-    public router: Router
-  ) {}
-
-  ngOnInit() {
-    this.questionService.getQuestions().subscribe(questions => {
-      this.totalQuestions = questions.length;
-    });
-    
-    this.questionService.getQuizResults().subscribe(results => {
-      console.log('Quiz results:', results);
-      this.practiceResults = results.filter(r => r.mode === 'practice')
-        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
-    });
-  }
-
-  startPracticeTest() {
-    const questions = this.questionService.createRandomQuiz(this.examConfig);
-    
-    this.router.navigate(['/quiz'], {
-      queryParams: {
-        mode: 'practice',
-        questions: JSON.stringify(questions.map(q => q._id)),
-        timeLimit: this.examConfig.timeLimit
-      }
-    });
-  }
-
-  formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  getAverageScore(): number {
-    if (this.practiceResults.length === 0) return 0;
-    const total = this.practiceResults.reduce((sum, result) => sum + result.score, 0);
-    return Math.round((total / this.practiceResults.length) * 100);
-  }
-
-  getBestScore(): number {
-    if (this.practiceResults.length === 0) return 0;
-    const best = Math.max(...this.practiceResults.map(r => r.score));
-    return Math.round(best * 100);
-  }
-}

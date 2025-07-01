@@ -1,0 +1,127 @@
+<div class="container py-8">
+      <h1 class="text-2xl font-bold mb-6">Học bài theo đề</h1>
+
+      <div class="mb-6">
+        <div class="info-card">
+          <h3 class="info-title">Hướng dẫn học bài</h3>
+          <ul class="info-list">
+            <li>• Mỗi đề có 20 câu hỏi (đề cuối có thể ít hơn)</li>
+            <li>• Làm xong sẽ có báo cáo kết quả chi tiết</li>
+            <li>• Kết quả mới sẽ ghi đè lên kết quả cũ</li>
+            <li>• Có thể làm lại nhiều lần để cải thiện điểm số</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="study-grid">
+        <div *ngFor="let set of studySets" class="study-card">
+          <div class="card-header">
+            <div class="card-title">
+              <h3 class="set-name">{{ set.name }}</h3>
+              <p class="set-info">{{ set.questions.length }} câu hỏi</p>
+            </div>
+            <div class="card-score">
+              <div
+                *ngIf="getSetResult(set._id) as result"
+                class="score-display"
+              >
+                <div
+                  class="score-percentage"
+                  [class.score-excellent]="result.score >= 0.8"
+                  [class.score-good]="result.score >= 0.5 && result.score < 0.8"
+                  [class.score-poor]="result.score < 0.5"
+                >
+                  {{ result.score * 100 | number : "1.0-0" }}%
+                </div>
+                <div class="score-details">
+                  {{
+                    result.score * result.totalQuestions | number : "1.0-0"
+                  }}/{{ result.totalQuestions }}
+                </div>
+                <div class="score-date">
+                  {{ result.completedAt | date : "dd/MM HH:mm" }}
+                </div>
+              </div>
+              <div *ngIf="!getSetResult(set._id)" class="no-score">
+                <div class="no-score-icon">📝</div>
+                <div class="no-score-text">Chưa làm</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-content">
+            <div class="categories-section">
+              <div class="categories-label">Danh mục:</div>
+              <div class="categories-list">
+                <span
+                  *ngFor="let category of getCategories(set)"
+                  class="category-tag"
+                >
+                  {{ category }}
+                </span>
+              </div>
+            </div>
+
+            <div
+              class="progress-section"
+              *ngIf="getSetResult(set._id) as result"
+            >
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  [style.width.%]="result.score * 100"
+                  [class.progress-excellent]="result.score >= 0.8"
+                  [class.progress-good]="
+                    result.score >= 0.5 && result.score < 0.8
+                  "
+                  [class.progress-poor]="result.score < 0.5"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <!-- Bắt đầu - when never attempted -->
+            <button
+              *ngIf="!getSetResult(set._id)"
+              class="action-btn btn-start"
+              (click)="startStudySet(set)"
+            >
+              <span class="btn-icon">🚀</span>
+              <span class="btn-text">Bắt đầu</span>
+            </button>
+
+            <!-- Xem lại và Làm lại - when already attempted -->
+            <div *ngIf="getSetResult(set._id)" class="action-buttons-group">
+              <button
+                class="action-btn btn-review"
+                (click)="reviewStudySet(set)"
+              >
+                <span class="btn-icon">👁️</span>
+                <span class="btn-text">Xem lại</span>
+              </button>
+
+              <button
+                class="action-btn btn-retake"
+                (click)="confirmRetakeStudySet(set)"
+              >
+                <span class="btn-icon">🔄</span>
+                <span class="btn-text">Làm lại</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="studySets.length === 0" class="empty-state">
+        <div class="empty-icon">📚</div>
+        <h3 class="empty-title">Chưa có câu hỏi nào</h3>
+        <p class="empty-description">Thêm câu hỏi để bắt đầu học bài</p>
+        <button
+          class="btn btn-primary"
+          (click)="router.navigate(['/questions'])"
+        >
+          Thêm câu hỏi
+        </button>
+      </div>
+    </div>

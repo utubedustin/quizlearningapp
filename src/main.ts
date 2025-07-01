@@ -5,9 +5,9 @@ import { CommonModule } from "@angular/common";
 import { provideRouter } from "@angular/router";
 import { provideHttpClient } from "@angular/common/http";
 
-import { HeaderComponent } from "./components/header.component";
-import { HomeComponent } from "./components/home.component";
-import { ConfirmationDialogComponent } from "./components/confirmation-dialog.component";
+import { HeaderComponent } from "./components/header/header.component";
+import { HomeComponent } from "./components/home/home.component";
+import { ConfirmationDialogComponent } from "./components/confirmation-dialog/confirmation-dialog.component";
 import { DialogService, DialogState } from "./services/dialog.service";
 
 const routes = [

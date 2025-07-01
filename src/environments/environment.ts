@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  mongodb: {
+  mongodb: { 
     connectionString: 'mongodb://localhost:27017/quiz-app',
     // Hoặc MongoDB Atlas: 'mongodb+srv://username:password@cluster.mongodb.net/quiz-app'
     databaseName: 'quiz-app',

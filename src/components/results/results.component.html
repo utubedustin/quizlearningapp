@@ -1,15 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { QuestionService } from '../services/question.service';
-import { QuizResult } from '../models/question.model';
-
-@Component({
-  selector: 'app-results',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div class="container py-8">
-      <h1 class="text-2xl font-bold mb-6">Kết quả học tập</h1>
+ <div class="container py-8">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Kết quả học tập</h1>
+        <button class="btn btn-outline btn-sm" (click)="refreshData()">
+          🔄 Làm mới
+        </button>
+      </div>
       
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="card text-center">
@@ -73,7 +68,7 @@ import { QuizResult } from '../models/question.model';
           </div>
           
           <div *ngIf="practiceResults.length > 0" class="space-y-3 max-h-96 overflow-y-auto">
-            <div *ngFor="let result of practiceResults.slice(0, 10); let i = index" 
+            <div *ngFor="let result of practiceResults.slice(0, showAllPractice ? practiceResults.length : 10); let i = index" 
                  class="flex justify-between items-center p-3 border rounded-lg">
               <div>
                 <h4 class="font-medium">Lần thi #{{ practiceResults.length - i }}</h4>
@@ -191,117 +186,26 @@ import { QuizResult } from '../models/question.model';
           </div>
         </div>
       </div>
+
+      <!-- Debug info -->
+      <div class="mt-8" *ngIf="showDebugInfo">
+        <div class="card bg-gray-50">
+          <h3 class="font-medium mb-2">Debug Info</h3>
+          <div class="text-sm space-y-1">
+            <div>Total Results: {{ allResults.length }}</div>
+            <div>Study Results: {{ studyResults.length }}</div>
+            <div>Practice Results: {{ practiceResults.length }}</div>
+            <div>Last Refresh: {{ lastRefresh | date:'HH:mm:ss' }}</div>
+          </div>
+          <button class="btn btn-outline btn-sm mt-2" (click)="showDebugInfo = false">
+            Hide Debug
+          </button>
+        </div>
+      </div>
+      
+      <div class="text-center mt-4" *ngIf="!showDebugInfo">
+        <button class="btn btn-outline btn-sm" (click)="showDebugInfo = true">
+          Show Debug Info
+        </button>
+      </div>
     </div>
-  `
-})
-export class ResultsComponent implements OnInit {
-  allResults: QuizResult[] = [];
-  studyResults: QuizResult[] = [];
-  practiceResults: QuizResult[] = [];
-  
-  totalAttempts = 0;
-  averageScore = 0;
-  bestScore = 0;
-  studyHours = 0;
-  
-  chartData: any[] = [];
-  showAllPractice = false;
-
-  constructor(private questionService: QuestionService) {}
-
-  ngOnInit() {
-    this.questionService.getQuizResults().subscribe(results => {
-      console.log('Quiz results:', results);
-      this.allResults = results;
-      this.studyResults = results.filter(r => r.mode === 'study');
-      this.practiceResults = results.filter(r => r.mode === 'practice')
-        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
-      
-      this.calculateStats();
-      this.generateChartData();
-    });
-  }
-
-  private calculateStats() {
-    this.totalAttempts = this.allResults.length;
-    
-    if (this.allResults.length > 0) {
-      const totalScore = this.allResults.reduce((sum, r) => sum + r.score, 0);
-      this.averageScore = Math.round((totalScore / this.allResults.length) * 100);
-      
-      this.bestScore = Math.round(Math.max(...this.allResults.map(r => r.score)) * 100);
-      
-      const totalTime = this.allResults.reduce((sum, r) => sum + r.timeSpent, 0);
-      this.studyHours = Math.round(totalTime / 3600 * 10) / 10;
-    }
-  }
-
-  private generateChartData() {
-    const last30Days = new Array(30).fill(0).map((_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      return date;
-    });
-
-    this.chartData = last30Days.map(date => {
-      const dayResults = this.allResults.filter(r => {
-        const resultDate = new Date(r.completedAt);
-        return resultDate.toDateString() === date.toDateString();
-      });
-
-      return {
-        date,
-        scores: dayResults.map(r => ({
-          score: r.score,
-          mode: r.mode
-        }))
-      };
-    }).filter(item => item.scores.length > 0);
-  }
-
-  getSetName(setId: string): string {
-    return setId.replace('set-', 'Đề ');
-  }
-
-  formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  getScoreByPeriod(days: number): number {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-
-    const recentResults = this.allResults.filter(r => 
-      new Date(r.completedAt) >= cutoffDate
-    );
-
-    if (recentResults.length === 0) return 0;
-
-    const total = recentResults.reduce((sum, r) => sum + r.score, 0);
-    return Math.round((total / recentResults.length) * 100);
-  }
-
-  getScoreByDifficulty(difficulty: string): number {
-    const difficultyResults: number[] = [];
-
-    this.allResults.forEach(result => {
-      result.questions.forEach((question, index) => {
-        if (question.difficulty === difficulty) {
-          const userAnswer = result.userAnswers[index];
-          if (userAnswer === question.correctAnswer) {
-            difficultyResults.push(1);
-          } else {
-            difficultyResults.push(0);
-          }
-        }
-      });
-    });
-
-    if (difficultyResults.length === 0) return 0;
-
-    const total = difficultyResults.reduce((sum, score) => sum + score, 0);
-    return Math.round((total / difficultyResults.length) * 100);
-  }
-}

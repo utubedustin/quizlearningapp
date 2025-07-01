@@ -1,0 +1,30 @@
+.practice-config {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #0ea5e9;
+  border-radius: 12px;
+}
+
+.practice-history {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.result-card {
+  transition: transform 0.2s ease;
+}
+
+.result-card:hover {
+  transform: translateY(-2px);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
