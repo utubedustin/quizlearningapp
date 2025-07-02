@@ -4,7 +4,6 @@ export interface Question {
   options: string[];
   correctAnswer: number | number[]; // Support both single and multiple correct answers
   category?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
   createdAt: Date;
   updatedAt: Date;
 }

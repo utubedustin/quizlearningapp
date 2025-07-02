@@ -21,120 +21,138 @@
       </div>
 
       <button class="btn btn-secondary" (click)="openImportDialog()">
-        Import JSON
+        📄 Import JSON
       </button>
       <button class="btn btn-primary" (click)="openAddDialog()">
-        Thêm câu hỏi
+        ➕ Thêm câu hỏi
       </button>
     </div>
   </div>
 
-  <div class="mb-6">
-    <div class="flex gap-4 items-center flex-wrap">
+  <!-- Search and Filter Section -->
+  <div class="search-filter-section">
+    <div class="search-filter-grid">
       <input
         type="text"
         [(ngModel)]="searchTerm"
         (ngModelChange)="filterQuestions()"
-        placeholder="Tìm kiếm câu hỏi..."
-        class="input flex-1 min-w-60"
+        placeholder="🔍 Tìm kiếm câu hỏi..."
+        class="input"
       />
       <select
         [(ngModel)]="filterCategory"
         (ngModelChange)="filterQuestions()"
         class="select"
       >
-        <option value="">Tất cả danh mục</option>
+        <option value="">📂 Tất cả danh mục</option>
         <option *ngFor="let category of categories" [value]="category">
           {{ category }}
         </option>
       </select>
+      
+      <!-- Page Size Selector -->
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600">Hiển thị:</label>
+        <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" class="select-sm">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+        </select>
+        <span class="text-sm text-gray-600">câu/trang</span>
+      </div>
     </div>
   </div>
 
-  <div class="grid gap-4">
+  <!-- Questions List -->
+  <div class="grid gap-6">
     <div
       *ngFor="let question of paginatedQuestions; let i = index"
       class="card"
     >
       <div class="flex justify-between items-start gap-4">
         <div class="flex-1">
-          <h3 class="font-semibold mb-2">
-          {{ (currentPage - 1) * pageSize + i + 1 }}. {{ question.content }}
+          <h3 class="question-content-text">
+            {{ (currentPage - 1) * pageSize + i + 1 }}. {{ question.content }}
           </h3>
           
           <!-- Question Type Indicator -->
-          <div class="mb-2">
+          <div class="mb-3">
             <span class="type-badge" [class.single-choice]="isSingleChoice(question)" [class.multiple-choice]="!isSingleChoice(question)">
-              {{ isSingleChoice(question) ? 'Chọn 1 đáp án' : 'Chọn nhiều đáp án' }}
+              {{ isSingleChoice(question) ? '🔘 Chọn 1 đáp án' : '☑️ Chọn nhiều đáp án' }}
             </span>
           </div>
           
-          <div class="grid gap-1 mb-3">
+          <!-- Options Display -->
+          <div class="options-grid mb-4">
             <div
               *ngFor="let option of question.options; let j = index"
-              class="text-sm px-3 py-1 rounded flex items-center gap-2"
-              [class.bg-success]="isCorrectOption(j, question.correctAnswer)"
-              [class.text-white]="isCorrectOption(j, question.correctAnswer)"
-              [class.bg-gray-100]="!isCorrectOption(j, question.correctAnswer)"
+              class="option-display"
+              [class.correct]="isCorrectOption(j, question.correctAnswer)"
+              [class.incorrect]="!isCorrectOption(j, question.correctAnswer)"
             >
-              {{ getChar(65 + j) }}. {{ option }}
-              <span *ngIf="isCorrectOption(j, question.correctAnswer)" class="ml-auto">✓</span>
+              <span class="option-letter">{{ getChar(65 + j) }}</span>
+              <span class="option-text">{{ option }}</span>
+              <span *ngIf="isCorrectOption(j, question.correctAnswer)" class="option-check">✓</span>
             </div>
           </div>
           
-          <!-- Category Tags -->
-          <div class="flex gap-2 text-xs mb-2">
+          <!-- Question Meta -->
+          <div class="question-meta">
             <span class="category-tag">
-              {{ question.category || "Chưa phân loại" }}
+              📁 {{ question.category || "Chưa phân loại" }}
             </span>
             <span class="date-tag">
-              {{ question.createdAt | date : "dd/MM/yyyy" }}
+              📅 {{ question.createdAt | date : "dd/MM/yyyy" }}
             </span>
           </div>
         </div>
-        <div class="flex gap-2">
+        
+        <!-- Question Actions -->
+        <div class="question-actions">
           <button
             class="btn btn-outline btn-sm"
             (click)="editQuestion(question)"
           >
-            Sửa
+            ✏️ Sửa
           </button>
           <button
             class="btn btn-danger btn-sm"
             (click)="confirmDeleteQuestion(question._id)"
           >
-            Xóa
+            🗑️ Xóa
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <div
-        class="flex justify-center items-center gap-4 mt-4"
-        *ngIf="totalPages > 1"
-      >
-        <button
-          class="btn btn-sm"
-          (click)="changePage(-1)"
-          [disabled]="currentPage === 1"
-        >
-          ⬅️ Trước
-        </button>
-        <span>Trang {{ currentPage }} / {{ totalPages }}</span>
-        <button
-          class="btn btn-sm"
-          (click)="changePage(1)"
-          [disabled]="currentPage === totalPages"
-        >
-          Tiếp ➡️
-        </button>
-      </div>
+  <!-- Pagination -->
+  <div class="pagination-controls" *ngIf="totalPages > 1">
+    <button
+      class="btn btn-outline btn-sm"
+      (click)="changePage(-1)"
+      [disabled]="currentPage === 1"
+    >
+      ⬅️ Trước
+    </button>
+    <div class="pagination-info">
+      Trang {{ currentPage }} / {{ totalPages }} ({{ filteredQuestions.length }} câu hỏi)
+    </div>
+    <button
+      class="btn btn-outline btn-sm"
+      (click)="changePage(1)"
+      [disabled]="currentPage === totalPages"
+    >
+      Tiếp ➡️
+    </button>
+  </div>
+
+  <!-- Empty State -->
   <div
     *ngIf="filteredQuestions.length === 0"
-    class="text-center py-8 text-gray-500"
+    class="text-center py-12 text-gray-500"
   >
-    Không tìm thấy câu hỏi nào
+    <div class="text-6xl mb-4">📝</div>
+    <h3 class="text-xl font-semibold mb-2">Không tìm thấy câu hỏi nào</h3>
+    <p class="mb-4">Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>
   </div>
 </div>
 
@@ -147,7 +165,7 @@
   <div class="dialog-content" (click)="$event.stopPropagation()">
     <div class="dialog-header">
       <h2 class="text-xl font-bold">
-        {{ isEditMode ? "Sửa câu hỏi" : "Thêm câu hỏi mới" }}
+        {{ isEditMode ? "✏️ Sửa câu hỏi" : "➕ Thêm câu hỏi mới" }}
       </h2>
       <button class="dialog-close" (click)="closeQuestionDialog()">
         ×
@@ -156,7 +174,7 @@
 
     <div class="dialog-body">
       <div class="form-group">
-        <label class="form-label">Nội dung câu hỏi</label>
+        <label class="form-label">📝 Nội dung câu hỏi</label>
         <textarea
           [(ngModel)]="questionForm.content"
           class="textarea"
@@ -166,7 +184,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Loại câu hỏi</label>
+        <label class="form-label">🎯 Loại câu hỏi</label>
         <div class="question-type-selector">
           <label class="type-option">
             <input
@@ -176,7 +194,7 @@
               [(ngModel)]="questionForm.type"
               (change)="onQuestionTypeChange()"
             />
-            <span>Chọn 1 đáp án</span>
+            <span>🔘 Chọn 1 đáp án</span>
           </label>
           <label class="type-option">
             <input
@@ -186,13 +204,13 @@
               [(ngModel)]="questionForm.type"
               (change)="onQuestionTypeChange()"
             />
-            <span>Chọn nhiều đáp án</span>
+            <span>☑️ Chọn nhiều đáp án</span>
           </label>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Các phương án trả lời</label>
+        <label class="form-label">📋 Các phương án trả lời</label>
         <div class="space-y-3">
           <div
             *ngFor="let option of questionForm.options; let i = index"
@@ -219,7 +237,7 @@
               <label class="option-label"
                 >Phương án {{ getChar(65 + i) }}</label
               >
-              <!-- Nút xóa option -->
+              <!-- Remove option button -->
               <button
                 *ngIf="questionForm.options.length > 2"
                 type="button"
@@ -239,25 +257,25 @@
           </div>
         </div>
         
-        <!-- Nút thêm option -->
+        <!-- Add option button -->
         <div class="mt-3" *ngIf="questionForm.options.length < 6">
           <button
             type="button"
             class="btn btn-outline btn-sm"
             (click)="addOption()"
           >
-            + Thêm phương án
+            ➕ Thêm phương án
           </button>
         </div>
         
         <p class="form-help">
-          {{ questionForm.type === 'single' ? 'Chọn radio button để đánh dấu đáp án đúng' : 'Chọn checkbox để đánh dấu các đáp án đúng' }}
+          {{ questionForm.type === 'single' ? '🔘 Chọn radio button để đánh dấu đáp án đúng' : '☑️ Chọn checkbox để đánh dấu các đáp án đúng' }}
         </p>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Danh mục</label>
+          <label class="form-label">📁 Danh mục</label>
           <input
             type="text"
             [(ngModel)]="questionForm.category"
@@ -277,7 +295,7 @@
 
     <div class="dialog-footer">
       <button class="btn btn-outline" (click)="closeQuestionDialog()">
-        Hủy
+        ❌ Hủy
       </button>
       <button 
         class="btn btn-primary" 
@@ -285,7 +303,7 @@
         [disabled]="isSaving"
       >
         <span *ngIf="isSaving" class="loading-spinner"></span>
-        {{ isEditMode ? "Cập nhật" : "Thêm câu hỏi" }}
+        {{ isEditMode ? "💾 Cập nhật" : "➕ Thêm câu hỏi" }}
       </button>
     </div>
   </div>
@@ -299,13 +317,13 @@
 >
   <div class="dialog-content dialog-lg" (click)="$event.stopPropagation()">
     <div class="dialog-header">
-      <h2 class="text-xl font-bold">Import câu hỏi từ JSON</h2>
+      <h2 class="text-xl font-bold">📄 Import câu hỏi từ JSON</h2>
       <button class="dialog-close" (click)="closeImportDialog()">×</button>
     </div>
 
     <div class="dialog-body">
       <div class="form-group">
-        <label class="form-label">Chọn file JSON</label>
+        <label class="form-label">📁 Chọn file JSON</label>
         <div
           class="file-upload-area"
           [class.drag-over]="isDragOver"
@@ -321,7 +339,7 @@
                 Kéo thả file JSON vào đây hoặc click để chọn
               </div>
               <div *ngIf="selectedFile" class="file-upload-primary">
-                {{ selectedFile.name }}
+                📁 {{ selectedFile.name }}
               </div>
               <div class="file-upload-secondary">
                 Hỗ trợ định dạng JSON chuẩn đã được xử lý từ file Python
@@ -338,11 +356,11 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Danh mục (Category)</label>
+        <label class="form-label">📂 Danh mục (Category)</label>
         <select class="select" [(ngModel)]="selectedImportCategory">
           <option value="">-- Chọn danh mục --</option>
-          <option value="Tin A">Tin A</option>
-          <option value="Tin B">Tin B</option>
+          <option value="Tin A">📊 Tin A</option>
+          <option value="Tin B">💻 Tin B</option>
         </select>
       </div>
       <!-- Import Progress -->
@@ -359,7 +377,7 @@
 
       <!-- Import Results -->
       <div *ngIf="importResults" class="import-results">
-        <h3 class="results-title">Kết quả import</h3>
+        <h3 class="results-title">📊 Kết quả import</h3>
         <div class="results-summary">
           <div class="result-item success">
             ✅ {{ importResults.questionsImported }} câu hỏi được thêm
@@ -379,7 +397,7 @@
         </div>
 
         <div *ngIf="importResults.errors.length > 0" class="error-details">
-          <h4 class="error-title">Chi tiết lỗi:</h4>
+          <h4 class="error-title">📋 Chi tiết lỗi:</h4>
           <ul class="error-list">
             <li *ngFor="let error of importResults.errors">{{ error }}</li>
           </ul>
@@ -389,7 +407,7 @@
 
     <div class="dialog-footer">
       <button class="btn btn-outline" (click)="closeImportDialog()">
-        {{ importResults ? "Đóng" : "Hủy" }}
+        {{ importResults ? "✅ Đóng" : "❌ Hủy" }}
       </button>
       <button
         *ngIf="!importResults"
@@ -399,8 +417,8 @@
           !selectedFile || !selectedImportCategory || isProcessing
         "
       >
-        <span *ngIf="!isProcessing">Import</span>
-        <span *ngIf="isProcessing">Đang xử lý...</span>
+        <span *ngIf="!isProcessing">📥 Import</span>
+        <span *ngIf="isProcessing">⏳ Đang xử lý...</span>
       </button>
     </div>
   </div>

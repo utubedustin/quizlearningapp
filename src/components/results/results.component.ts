@@ -11,7 +11,7 @@ import { QuizResult } from '../../models/question.model';
   styleUrls: ['./results.component.css']
 })
 export class ResultsComponent implements OnInit {
-   allResults: QuizResult[] = [];
+  allResults: QuizResult[] = [];
   studyResults: QuizResult[] = [];
   practiceResults: QuizResult[] = [];
   
@@ -86,7 +86,9 @@ export class ResultsComponent implements OnInit {
         date,
         scores: dayResults.map(r => ({
           score: r.score,
-          mode: r.mode
+          mode: r.mode,
+          totalQuestions: r.totalQuestions,
+          timeSpent: r.timeSpent
         }))
       };
     }).filter(item => item.scores.length > 0);
@@ -114,27 +116,5 @@ export class ResultsComponent implements OnInit {
 
     const total = recentResults.reduce((sum, r) => sum + r.score, 0);
     return Math.round((total / recentResults.length) * 100);
-  }
-
-  getScoreByDifficulty(difficulty: string): number {
-    const difficultyResults: number[] = [];
-
-    this.allResults.forEach(result => {
-      result.questions.forEach((question, index) => {
-        if (question.difficulty === difficulty) {
-          const userAnswer = result.userAnswers[index];
-          if (userAnswer === question.correctAnswer) {
-            difficultyResults.push(1);
-          } else {
-            difficultyResults.push(0);
-          }
-        }
-      });
-    });
-
-    if (difficultyResults.length === 0) return 0;
-
-    const total = difficultyResults.reduce((sum, score) => sum + score, 0);
-    return Math.round((total / difficultyResults.length) * 100);
   }
 }

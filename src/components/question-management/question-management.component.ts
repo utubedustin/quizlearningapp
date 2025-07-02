@@ -54,6 +54,11 @@ export class QuestionManagementComponent implements OnInit {
   editingQuestionId: string | null = null;
   selectedImportCategory: string = "";
 
+  // Pagination
+  currentPage = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50];
+
   constructor(
     private questionService: QuestionService,
     private mongoService: MongoDBService,
@@ -65,6 +70,27 @@ export class QuestionManagementComponent implements OnInit {
   ngOnInit() {
     this.loadQuestions();
     this.checkMongoConnection();
+  }
+
+  get totalPages() {
+    return Math.ceil(this.filteredQuestions.length / this.pageSize);
+  }
+
+  get paginatedQuestions() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredQuestions.slice(start, start + this.pageSize);
+  }
+
+  changePage(delta: number) {
+    const newPage = this.currentPage + delta;
+    if (newPage >= 1 && newPage <= this.totalPages) {
+      this.currentPage = newPage;
+    }
+  }
+
+  onPageSizeChange() {
+    this.currentPage = 1;
+    this.filterQuestions();
   }
 
   private loadQuestions() {
@@ -113,25 +139,6 @@ export class QuestionManagementComponent implements OnInit {
 
   hideToast() {
     this.showToast = false;
-  }
-
-  pageSize = 10;
-  currentPage = 1;
-
-  get totalPages() {
-    return Math.ceil(this.filteredQuestions.length / this.pageSize);
-  }
-
-  get paginatedQuestions() {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredQuestions.slice(start, start + this.pageSize);
-  }
-
-  changePage(delta: number) {
-    const newPage = this.currentPage + delta;
-    if (newPage >= 1 && newPage <= this.totalPages) {
-      this.currentPage = newPage;
-    }
   }
 
   // Check if question is single choice

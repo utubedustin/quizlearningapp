@@ -383,6 +383,48 @@ export class QuizComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Get incorrect questions from current quiz
+  getIncorrectQuestions(): Question[] {
+    const incorrectQuestions: Question[] = [];
+    
+    for (let i = 0; i < this.questions.length; i++) {
+      const userAnswer = this.userAnswers[i];
+      const question = this.questions[i];
+      
+      // Check if answer is incorrect (not null and not correct)
+      if (userAnswer !== null && !this.isAnswerCorrect(userAnswer, question.correctAnswer)) {
+        incorrectQuestions.push(question);
+      }
+    }
+    
+    return incorrectQuestions;
+  }
+
+  // Check if there are any incorrect answers
+  hasIncorrectAnswers(): boolean {
+    return this.getIncorrectQuestions().length > 0;
+  }
+
+  // Retake only incorrect answers
+  retakeIncorrectAnswers() {
+    const incorrectQuestions = this.getIncorrectQuestions();
+    
+    if (incorrectQuestions.length === 0) {
+      return; // No incorrect answers to retake
+    }
+
+    // Navigate to quiz with only incorrect questions
+    this.router.navigate(['/quiz'], {
+      queryParams: {
+        mode: this.mode,
+        setId: this.setId + '-incorrect',
+        questions: JSON.stringify(incorrectQuestions.map(q => q._id)),
+        timeLimit: this.mode === 'practice' ? Math.ceil(incorrectQuestions.length * 1.5) : 0, // 1.5 minutes per question for practice
+        retake: 'true'
+      }
+    });
+  }
+
   // Review mode helper methods
   getCorrectAnswersCount(): number {
     if (!this.reviewResult) return 0;
@@ -410,5 +452,52 @@ export class QuizComponent implements OnInit, OnDestroy {
   getUnansweredCount(): number {
     if (!this.reviewResult) return 0;
     return this.reviewResult.userAnswers.filter(answer => answer === null).length;
+  }
+
+  // Check if there are incorrect answers in review mode
+  hasIncorrectAnswersInReview(): boolean {
+    if (!this.reviewResult) return false;
+    
+    for (let i = 0; i < this.questions.length; i++) {
+      const userAnswer = this.reviewResult.userAnswers[i];
+      const question = this.questions[i];
+      
+      if (userAnswer !== null && !this.isAnswerCorrect(userAnswer, question.correctAnswer)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  // Retake incorrect answers from review mode
+  retakeIncorrectAnswersFromReview() {
+    if (!this.reviewResult) return;
+    
+    const incorrectQuestions: Question[] = [];
+    
+    for (let i = 0; i < this.questions.length; i++) {
+      const userAnswer = this.reviewResult.userAnswers[i];
+      const question = this.questions[i];
+      
+      if (userAnswer !== null && !this.isAnswerCorrect(userAnswer, question.correctAnswer)) {
+        incorrectQuestions.push(question);
+      }
+    }
+    
+    if (incorrectQuestions.length === 0) {
+      return;
+    }
+
+    // Navigate to quiz with only incorrect questions
+    this.router.navigate(['/quiz'], {
+      queryParams: {
+        mode: this.mode,
+        setId: this.setId + '-incorrect',
+        questions: JSON.stringify(incorrectQuestions.map(q => q._id)),
+        timeLimit: this.mode === 'practice' ? Math.ceil(incorrectQuestions.length * 1.5) : 0,
+        retake: 'true'
+      }
+    });
   }
 }

@@ -115,7 +115,6 @@ export class QuestionService {
         options: ["Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Huế"],
         correctAnswer: 1,
         category: "Địa lý",
-        difficulty: "easy",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -130,7 +129,6 @@ export class QuestionService {
         ],
         correctAnswer: 1,
         category: "Văn học",
-        difficulty: "medium",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -140,7 +138,6 @@ export class QuestionService {
         options: ["JavaScript", "Python", "Java", "C++"],
         correctAnswer: [0, 1, 2, 3], // Multiple correct answers
         category: "Công nghệ",
-        difficulty: "medium",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -480,7 +477,6 @@ export class QuestionService {
     totalPracticeResults: number;
     averageScore: number;
     categoriesCount: { [key: string]: number };
-    difficultyCount: { [key: string]: number };
   }> {
     return this.mongoService.getStatistics().pipe(
       catchError((error) => {
@@ -498,7 +494,6 @@ export class QuestionService {
     totalPracticeResults: number;
     averageScore: number;
     categoriesCount: { [key: string]: number };
-    difficultyCount: { [key: string]: number };
   }> {
     const questions = this.questionsSubject.value;
     const practiceResults = this.quizResultsSubject.value.filter(
@@ -506,14 +501,10 @@ export class QuestionService {
     );
 
     const categoriesCount: { [key: string]: number } = {};
-    const difficultyCount: { [key: string]: number } = {};
 
     questions.forEach((q) => {
       const category = q.category || "Chưa phân loại";
-      const difficulty = q.difficulty || "medium";
-
       categoriesCount[category] = (categoriesCount[category] || 0) + 1;
-      difficultyCount[difficulty] = (difficultyCount[difficulty] || 0) + 1;
     });
 
     const averageScore =
@@ -527,7 +518,6 @@ export class QuestionService {
       totalPracticeResults: practiceResults.length,
       averageScore: Math.round(averageScore * 100),
       categoriesCount,
-      difficultyCount,
     });
   }
 
@@ -552,7 +542,6 @@ export class QuestionService {
             options: q.options,
             correctAnswer: correctAnswers.length === 1 ? correctAnswers[0] : correctAnswers,
             category: q.category || "",
-            difficulty: q.difficulty || "medium",
             createdAt: new Date(),
           });
         } else {

@@ -126,81 +126,61 @@
     </div>
   </div>
 
-  <!-- Điểm số theo thời gian và Thống kê theo độ khó - 1 row -->
-  <div class="grid grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
-    <div class="card">
-      <h2 class="text-lg font-semibold mb-4">Điểm số theo thời gian</h2>
-      <div class="space-y-3">
-        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-          <span class="font-medium">7 ngày qua</span>
-          <span class="font-bold text-primary">{{ getScoreByPeriod(7) }}%</span>
-        </div>
-        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-          <span class="font-medium">30 ngày qua</span>
-          <span class="font-bold text-secondary">{{ getScoreByPeriod(30) }}%</span>
-        </div>
-        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-          <span class="font-medium">Tất cả thời gian</span>
-          <span class="font-bold text-accent">{{ averageScore }}%</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="card">
-      <h2 class="text-lg font-semibold mb-4">Thống kê theo độ khó</h2>
-      <div class="space-y-3">
-        <div class="flex justify-between items-center p-3 bg-green-50 rounded">
-          <span class="font-medium">Dễ</span>
-          <span class="font-bold text-success">{{ getScoreByDifficulty('easy') }}%</span>
-        </div>
-        <div class="flex justify-between items-center p-3 bg-yellow-50 rounded">
-          <span class="font-medium">Trung bình</span>
-          <span class="font-bold text-warning">{{ getScoreByDifficulty('medium') }}%</span>
-        </div>
-        <div class="flex justify-between items-center p-3 bg-red-50 rounded">
-          <span class="font-medium">Khó</span>
-          <span class="font-bold text-error">{{ getScoreByDifficulty('hard') }}%</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Biểu đồ tiến độ -->
+  <!-- Biểu đồ tiến độ cải tiến -->
   <div class="card">
-    <h2 class="text-lg font-semibold mb-4">Biểu đồ tiến độ</h2>
+    <h2 class="text-lg font-semibold mb-6">📈 Biểu đồ tiến độ học tập</h2>
     
-    <div *ngIf="chartData.length === 0" class="text-center py-8 text-gray-500">
-      Chưa có dữ liệu để hiển thị biểu đồ
+    <div *ngIf="chartData.length === 0" class="text-center py-12 text-gray-500">
+      <div class="text-6xl mb-4">📊</div>
+      <h3 class="text-xl font-semibold mb-2">Chưa có dữ liệu</h3>
+      <p>Hãy bắt đầu học bài hoặc luyện thi để xem biểu đồ tiến độ</p>
     </div>
     
-    <div *ngIf="chartData.length > 0">
-      <div class="mb-4">
-        <div class="flex gap-4 text-sm">
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 bg-primary rounded"></div>
-            <span>Học bài</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 bg-secondary rounded"></div>
-            <span>Luyện thi</span>
+    <div *ngIf="chartData.length > 0" class="chart-container">
+      <!-- Legend -->
+      <div class="chart-legend">
+        <div class="legend-item">
+          <div class="legend-dot study"></div>
+          <span>📚 Học bài</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot practice"></div>
+          <span>🏆 Luyện thi</span>
+        </div>
+      </div>
+      
+      <!-- Chart -->
+      <div class="chart-grid">
+        <div *ngFor="let item of chartData.slice(-14)" class="chart-day">
+          <div class="chart-date">{{ item.date | date:'dd/MM' }}</div>
+          <div class="chart-bars">
+            <div *ngFor="let score of item.scores" 
+                 class="chart-bar"
+                 [class.study-bar]="score.mode === 'study'"
+                 [class.practice-bar]="score.mode === 'practice'"
+                 [style.height.px]="score.score * 60"
+                 [title]="getScoreTooltip(score)">
+              <div class="bar-score">{{ (score.score * 100) | number:'1.0-0' }}%</div>
+            </div>
           </div>
         </div>
       </div>
       
-      <div class="space-y-2">
-        <div *ngFor="let item of chartData" class="flex items-center gap-3">
-          <div class="w-20 text-sm text-gray-600">
-            {{ item.date | date:'dd/MM' }}
-          </div>
-          <div class="flex-1 flex gap-1">
-            <div *ngFor="let score of item.scores" 
-                 class="h-6 min-w-8 rounded flex items-center justify-center text-xs text-white"
-                 [class.bg-primary]="score.mode === 'study'"
-                 [class.bg-secondary]="score.mode === 'practice'"
-                 [style.opacity]="score.score">
-              {{ (score.score * 100) | number:'1.0-0' }}
-            </div>
-          </div>
+      <!-- Chart Stats -->
+      <div class="chart-stats">
+        <div class="stat-item">
+          <span class="stat-label">Tổng số lần làm bài:</span>
+          <span class="stat-value">{{ totalAttempts }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Điểm trung bình:</span>
+          <span class="stat-value">{{ averageScore }}%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Xu hướng:</span>
+          <span class="stat-value" [class.text-success]="getTrend() > 0" [class.text-error]="getTrend() < 0">
+            {{ getTrend() > 0 ? '📈 Tăng' : getTrend() < 0 ? '📉 Giảm' : '➡️ Ổn định' }}
+          </span>
         </div>
       </div>
     </div>
@@ -221,10 +201,4 @@
       </button>
     </div>
   </div>
-  
-  <!-- <div class="text-center mt-4" *ngIf="!showDebugInfo">
-    <button class="btn btn-outline btn-sm" (click)="showDebugInfo = true">
-      Show Debug Info
-    </button>
-  </div> -->
 </div>
