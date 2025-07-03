@@ -117,4 +117,21 @@ export class ResultsComponent implements OnInit {
     const total = recentResults.reduce((sum, r) => sum + r.score, 0);
     return Math.round((total / recentResults.length) * 100);
   }
+
+  getScoreTooltip(score: any): string {
+    const percentage = Math.round(score.score * 100);
+    const timeFormatted = this.formatTime(score.timeSpent);
+    return `Score: ${percentage}% (${score.score * score.totalQuestions}/${score.totalQuestions})\nMode: ${score.mode}\nTime: ${timeFormatted}`;
+  }
+
+  getTrend(): number {
+    if (this.allResults.length < 2) return 0;
+    
+    const recentScore = this.getScoreByPeriod(7); // Last 7 days
+    const olderScore = this.getScoreByPeriod(14) - this.getScoreByPeriod(7); // Previous 7 days
+    
+    if (olderScore === 0) return 0;
+    
+    return recentScore - olderScore;
+  }
 }
