@@ -481,46 +481,17 @@ export class QuestionManagementComponent implements OnInit {
         // Log response for debugging
         console.log("API Response:", response);
 
-        // Ensure questionsImported is an array
-        let questionsImported: any[] = [];
-        if (Array.isArray(response.questionsImported)) {
-          questionsImported = response.questionsImported;
-        } else if (
-          response.questionsImported &&
-          typeof response.questionsImported === "object"
-        ) {
-          // Handle object format (e.g., from Python script)
-          questionsImported = Object.values(response.questionsImported).flatMap(
-            (q: any) =>
-              Object.entries(q).map(([key, value]: [string, any]) => ({
-                id: key,
-                content: value[0]?.[5] || "", // Extract content from Python JSON
-                options:
-                  response.answers?.[key]?.options?.map((opt: any) => opt[5]) ||
-                  [],
-                correctAnswer: response.correct_options?.[key]
-                  ? response.answers?.[key]?.options?.findIndex(
-                      (opt: any) => opt[5] === response.correct_options[key]
-                    )
-                  : 0,
-                category: this.selectedImportCategory || "Chưa phân loại",
-                createdAt: new Date(),
-              }))
-          );
-        } else {
-          console.error("Invalid questionsImported format:", questionsImported);
-          throw new Error("questionsImported is not in a valid format");
-        }
+        // API trả về addedCount thay vì questionsImported
+        const addedCount = response.addedCount || 0;
 
         this.processingProgress = 100;
         this.processingMessage = "Hoàn thành!";
         this.importResults = {
-          questionsImported: questionsImported.length,
-          duplicatesFound: response.duplicatesFound || 0,
+          questionsImported: addedCount,
           errors: response.errors || [],
         };
 
-        this.showToastMessage(`Import thành công ${questionsImported.length} câu hỏi!`, 'success');
+        this.showToastMessage(`Import thành công ${addedCount} câu hỏi!`, 'success');
         
         // Refresh questions list after import
         setTimeout(() => {
@@ -532,7 +503,6 @@ export class QuestionManagementComponent implements OnInit {
         this.showToastMessage('Lỗi khi import file JSON', 'error');
         this.importResults = {
           questionsImported: 0,
-          duplicatesFound: 0,
           errors: [error.message || "Không thể import file JSON"]
         };
       } finally {
