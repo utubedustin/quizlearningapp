@@ -1,4 +1,4 @@
-<div class="container py-8">
+<div class="container py-8 mb-3">
   <h1 class="text-2xl font-bold mb-6">Luyện thi</h1>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -8,17 +8,35 @@
 
         <div class="space-y-4">
           <div>
+            <label class="block font-medium mb-2">Danh mục câu hỏi</label>
+            <select [(ngModel)]="examConfig.category" (ngModelChange)="onCategoryChange()" class="select">
+              <option value="">Tất cả danh mục</option>
+              <option *ngFor="let category of categories" [value]="category">
+                {{ category }}
+              </option>
+            </select>
+            <p class="text-sm text-gray-600 mt-1">
+              {{ examConfig.category ? 'Đã chọn: ' + examConfig.category : 'Chọn tất cả danh mục' }}
+            </p>
+          </div>
+
+          <div>
             <label class="block font-medium mb-2">Số lượng câu hỏi</label>
             <select [(ngModel)]="examConfig.numberOfQuestions" class="select">
               <option [value]="5">5 câu</option>
+              <option [value]="10">10 câu</option>
+              <option [value]="20">20 câu</option>
               <option [value]="30">30 câu</option>
               <option [value]="50">50 câu</option>
               <option [value]="60">60 câu</option>
               <option [value]="70">70 câu</option>
               <option [value]="totalQuestions" *ngIf="totalQuestions > 0">
-                Tất cả ({{ totalQuestions }} câu)
+                Tất cả {{ examConfig.category ? 'trong danh mục' : '' }} ({{ totalQuestions }} câu)
               </option>
             </select>
+            <p class="text-sm text-gray-600 mt-1">
+              Có {{ totalQuestions }} câu hỏi {{ examConfig.category ? 'trong danh mục "' + examConfig.category + '"' : 'tổng cộng' }}
+            </p>
           </div>
 
           <div>

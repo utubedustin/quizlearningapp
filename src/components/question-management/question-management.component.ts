@@ -1,28 +1,28 @@
-import { Component, OnInit } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { FormsModule } from "@angular/forms";
-import { QuestionService } from "../../services/question.service";
-import { MongoDBService } from "../../services/mongodb.service";
-import { Question } from "../../models/question.model";
-import { DialogService } from "../../services/dialog.service";
-import { LoadingService } from "../../services/loading.service";
-import { HttpClientModule, HttpClient } from "@angular/common/http";
-import { environment } from "../../environments/environment";
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { QuestionService } from '../../services/question.service';
+import { MongoDBService } from '../../services/mongodb.service';
+import { Question } from '../../models/question.model';
+import { DialogService } from '../../services/dialog.service';
+import { LoadingService } from '../../services/loading.service';
+import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 @Component({
-  selector: "app-question-management",
+  selector: 'app-question-management',
   standalone: true,
   imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './question-management.component.html',
-  styleUrls: ['./question-management.component.css']
+  styleUrls: ['./question-management.component.css'],
 })
 export class QuestionManagementComponent implements OnInit {
   questions: Question[] = [];
   filteredQuestions: Question[] = [];
   categories: string[] = [];
 
-  searchTerm = "";
-  filterCategory = "";
+  searchTerm = '';
+  filterCategory = '';
 
   showQuestionDialog = false;
   showImportDialog = false;
@@ -32,7 +32,7 @@ export class QuestionManagementComponent implements OnInit {
   selectedFile: File | null = null;
   isProcessing = false;
   processingProgress = 0;
-  processingMessage = "";
+  processingMessage = '';
   isDragOver = false;
   importResults: any = null;
 
@@ -40,19 +40,19 @@ export class QuestionManagementComponent implements OnInit {
 
   // Toast notification
   showToast = false;
-  toastMessage = "";
+  toastMessage = '';
   toastType: 'success' | 'error' = 'success';
 
   questionForm = {
-    content: "",
-    options: ["", "", "", ""],
+    content: '',
+    options: ['', '', '', ''],
     correctAnswer: 0 as number | number[],
-    category: "",
-    type: "single" as "single" | "multiple"
+    category: '',
+    type: 'single' as 'single' | 'multiple',
   };
 
   editingQuestionId: string | null = null;
-  selectedImportCategory: string = "";
+  selectedImportCategory: string = '';
 
   // Pagination
   currentPage = 1;
@@ -94,8 +94,8 @@ export class QuestionManagementComponent implements OnInit {
   }
 
   private loadQuestions() {
-    this.loadingService.show("Đang tải câu hỏi...");
-    
+    this.loadingService.show('Đang tải câu hỏi...');
+
     this.questionService.getQuestions().subscribe({
       next: (questions) => {
         this.questions = questions;
@@ -107,7 +107,7 @@ export class QuestionManagementComponent implements OnInit {
         console.error('Error loading questions:', error);
         this.showToastMessage('Lỗi khi tải câu hỏi', 'error');
         this.loadingService.hide();
-      }
+      },
     });
   }
 
@@ -118,7 +118,7 @@ export class QuestionManagementComponent implements OnInit {
       },
       error: () => {
         this.mongoConfig.isConnected = false;
-      }
+      },
     });
 
     this.mongoService.config$.subscribe((config) => {
@@ -126,11 +126,14 @@ export class QuestionManagementComponent implements OnInit {
     });
   }
 
-  private showToastMessage(message: string, type: 'success' | 'error' = 'success') {
+  private showToastMessage(
+    message: string,
+    type: 'success' | 'error' = 'success'
+  ) {
     this.toastMessage = message;
     this.toastType = type;
     this.showToast = true;
-    
+
     // Auto hide after 3 seconds
     setTimeout(() => {
       this.hideToast();
@@ -147,7 +150,10 @@ export class QuestionManagementComponent implements OnInit {
   }
 
   // Check if an option is correct
-  isCorrectOption(optionIndex: number, correctAnswer: number | number[]): boolean {
+  isCorrectOption(
+    optionIndex: number,
+    correctAnswer: number | number[]
+  ): boolean {
     if (Array.isArray(correctAnswer)) {
       return correctAnswer.includes(optionIndex);
     } else {
@@ -175,8 +181,8 @@ export class QuestionManagementComponent implements OnInit {
   // Handle correct answer change for multiple choice
   onCorrectAnswerChange(optionIndex: number, event: any) {
     if (this.questionForm.type === 'multiple') {
-      let correctAnswers = Array.isArray(this.questionForm.correctAnswer) 
-        ? [...this.questionForm.correctAnswer] 
+      let correctAnswers = Array.isArray(this.questionForm.correctAnswer)
+        ? [...this.questionForm.correctAnswer]
         : [];
 
       if (event.target.checked) {
@@ -184,7 +190,9 @@ export class QuestionManagementComponent implements OnInit {
           correctAnswers.push(optionIndex);
         }
       } else {
-        correctAnswers = correctAnswers.filter(index => index !== optionIndex);
+        correctAnswers = correctAnswers.filter(
+          (index) => index !== optionIndex
+        );
       }
 
       this.questionForm.correctAnswer = correctAnswers;
@@ -194,7 +202,7 @@ export class QuestionManagementComponent implements OnInit {
   // Add new option
   addOption() {
     if (this.questionForm.options.length < 6) {
-      this.questionForm.options.push("");
+      this.questionForm.options.push('');
     }
   }
 
@@ -202,20 +210,23 @@ export class QuestionManagementComponent implements OnInit {
   removeOption(index: number) {
     if (this.questionForm.options.length > 2) {
       this.questionForm.options.splice(index, 1);
-      
+
       // Adjust correct answers if needed
       if (this.questionForm.type === 'single') {
         // Type guard to ensure correctAnswer is a number
         if (typeof this.questionForm.correctAnswer === 'number') {
           if (this.questionForm.correctAnswer >= index) {
-            this.questionForm.correctAnswer = Math.max(0, this.questionForm.correctAnswer - 1);
+            this.questionForm.correctAnswer = Math.max(
+              0,
+              this.questionForm.correctAnswer - 1
+            );
           }
         }
       } else {
         if (Array.isArray(this.questionForm.correctAnswer)) {
           this.questionForm.correctAnswer = this.questionForm.correctAnswer
-            .filter(ans => ans !== index)
-            .map(ans => ans > index ? ans - 1 : ans);
+            .filter((ans) => ans !== index)
+            .map((ans) => (ans > index ? ans - 1 : ans));
         }
       }
     }
@@ -257,11 +268,11 @@ export class QuestionManagementComponent implements OnInit {
     this.questionForm = {
       content: question.content,
       options: [...question.options],
-      correctAnswer: Array.isArray(question.correctAnswer) 
-        ? [...question.correctAnswer] 
+      correctAnswer: Array.isArray(question.correctAnswer)
+        ? [...question.correctAnswer]
         : question.correctAnswer,
-      category: question.category || "",
-      type: Array.isArray(question.correctAnswer) ? "multiple" : "single"
+      category: question.category || '',
+      type: Array.isArray(question.correctAnswer) ? 'multiple' : 'single',
     };
     this.editingQuestionId = question._id;
     this.showQuestionDialog = true;
@@ -269,20 +280,20 @@ export class QuestionManagementComponent implements OnInit {
 
   async confirmDeleteQuestion(id: string) {
     const confirmed = await this.dialogService.confirm({
-      title: "Xóa câu hỏi",
+      title: 'Xóa câu hỏi',
       message:
-        "Bạn có chắc chắn muốn xóa câu hỏi này? Hành động này không thể hoàn tác.",
-      confirmText: "Xóa",
-      cancelText: "Hủy",
+        'Bạn có chắc chắn muốn xóa câu hỏi này? Hành động này không thể hoàn tác.',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
     });
 
     if (confirmed) {
-      this.loadingService.show("Đang xóa câu hỏi...");
-      
+      this.loadingService.show('Đang xóa câu hỏi...');
+
       try {
         this.questionService.deleteQuestion(id);
         this.showToastMessage('Xóa câu hỏi thành công!', 'success');
-        
+
         // Refresh questions list after deletion
         setTimeout(() => {
           this.loadQuestions();
@@ -303,25 +314,31 @@ export class QuestionManagementComponent implements OnInit {
     }
 
     if (this.questionForm.options.some((opt) => !opt.trim())) {
-      this.showToastMessage('Vui lòng điền đầy đủ các phương án trả lời', 'error');
+      this.showToastMessage(
+        'Vui lòng điền đầy đủ các phương án trả lời',
+        'error'
+      );
       return;
     }
 
     // Validate correct answers
     if (this.questionForm.type === 'multiple') {
-      if (!Array.isArray(this.questionForm.correctAnswer) || this.questionForm.correctAnswer.length === 0) {
+      if (
+        !Array.isArray(this.questionForm.correctAnswer) ||
+        this.questionForm.correctAnswer.length === 0
+      ) {
         this.showToastMessage('Vui lòng chọn ít nhất một đáp án đúng', 'error');
         return;
       }
     }
 
     const confirmed = await this.dialogService.confirm({
-      title: this.isEditMode ? "Cập nhật câu hỏi" : "Thêm câu hỏi",
+      title: this.isEditMode ? 'Cập nhật câu hỏi' : 'Thêm câu hỏi',
       message: this.isEditMode
-        ? "Bạn có muốn cập nhật câu hỏi này?"
-        : "Bạn có muốn thêm câu hỏi này?",
-      confirmText: this.isEditMode ? "Cập nhật" : "Thêm",
-      cancelText: "Hủy",
+        ? 'Bạn có muốn cập nhật câu hỏi này?'
+        : 'Bạn có muốn thêm câu hỏi này?',
+      confirmText: this.isEditMode ? 'Cập nhật' : 'Thêm',
+      cancelText: 'Hủy',
     });
 
     if (confirmed) {
@@ -331,17 +348,22 @@ export class QuestionManagementComponent implements OnInit {
 
   saveQuestion() {
     this.isSaving = true;
-    
+
     const questionData = {
       content: this.questionForm.content.trim(),
-      options: this.questionForm.options.map(opt => opt.trim()).filter(opt => opt),
+      options: this.questionForm.options
+        .map((opt) => opt.trim())
+        .filter((opt) => opt),
       correctAnswer: this.questionForm.correctAnswer,
-      category: this.questionForm.category.trim()
+      category: this.questionForm.category.trim(),
     };
 
     try {
       if (this.isEditMode && this.editingQuestionId) {
-        this.questionService.updateQuestion(this.editingQuestionId, questionData);
+        this.questionService.updateQuestion(
+          this.editingQuestionId,
+          questionData
+        );
         this.showToastMessage('Cập nhật câu hỏi thành công!', 'success');
       } else {
         this.questionService.addQuestion(questionData);
@@ -349,12 +371,11 @@ export class QuestionManagementComponent implements OnInit {
       }
 
       this.closeQuestionDialog();
-      
+
       // Refresh questions list after save to get updated data
       setTimeout(() => {
         this.loadQuestions();
       }, 500);
-      
     } catch (error) {
       console.error('Error saving question:', error);
       this.showToastMessage('Lỗi khi lưu câu hỏi', 'error');
@@ -373,11 +394,11 @@ export class QuestionManagementComponent implements OnInit {
 
   private resetQuestionForm() {
     this.questionForm = {
-      content: "",
-      options: ["", "", "", ""],
+      content: '',
+      options: ['', '', '', ''],
       correctAnswer: 0,
-      category: "",
-      type: "single"
+      category: '',
+      type: 'single',
     };
   }
 
@@ -400,7 +421,7 @@ export class QuestionManagementComponent implements OnInit {
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
-    if (file && file.type === "application/json") {
+    if (file && file.type === 'application/json') {
       this.selectedFile = file;
     } else {
       this.showToastMessage('Vui lòng chọn file JSON hợp lệ', 'error');
@@ -425,7 +446,7 @@ export class QuestionManagementComponent implements OnInit {
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.type === "application/json") {
+      if (file.type === 'application/json') {
         this.selectedFile = file;
       } else {
         this.showToastMessage('Vui lòng chọn file JSON hợp lệ', 'error');
@@ -437,10 +458,10 @@ export class QuestionManagementComponent implements OnInit {
     if (!this.selectedFile) return;
 
     const confirmed = await this.dialogService.confirm({
-      title: "Import câu hỏi từ JSON",
+      title: 'Import câu hỏi từ JSON',
       message: `Bạn có muốn import từ file "${this.selectedFile.name}"?`,
-      confirmText: "Import",
-      cancelText: "Hủy",
+      confirmText: 'Import',
+      cancelText: 'Hủy',
     });
 
     if (confirmed) {
@@ -453,22 +474,23 @@ export class QuestionManagementComponent implements OnInit {
 
     this.isProcessing = true;
     this.processingProgress = 0;
-    this.processingMessage = "Đang đọc file JSON...";
+    this.processingMessage = 'Đang đọc file JSON...';
 
     const reader = new FileReader();
     reader.onload = async () => {
       try {
         const jsonText = reader.result as string;
         const parsed = JSON.parse(jsonText);
-        
+
         for (const key in parsed) {
           if (parsed.hasOwnProperty(key)) {
-            parsed[key].category = this.selectedImportCategory || "Chưa phân loại";
+            parsed[key].category =
+              this.selectedImportCategory || 'Chưa phân loại';
           }
         }
-        
+
         this.processingProgress = 20;
-        this.processingMessage = "Đang gửi dữ liệu đến server...";
+        this.processingMessage = 'Đang gửi dữ liệu đến server...';
 
         // Send JSON data to backend API
         const response = await this.http
@@ -476,75 +498,47 @@ export class QuestionManagementComponent implements OnInit {
           .toPromise();
 
         this.processingProgress = 80;
-        this.processingMessage = "Đang xử lý phản hồi từ server...";
+        this.processingMessage = 'Đang xử lý phản hồi từ server...';
 
         // Log response for debugging
-        console.log("API Response:", response);
+        console.log('API Response:', response);
 
-        // Ensure questionsImported is an array
-        let questionsImported: any[] = [];
-        if (Array.isArray(response.questionsImported)) {
-          questionsImported = response.questionsImported;
-        } else if (
-          response.questionsImported &&
-          typeof response.questionsImported === "object"
-        ) {
-          // Handle object format (e.g., from Python script)
-          questionsImported = Object.values(response.questionsImported).flatMap(
-            (q: any) =>
-              Object.entries(q).map(([key, value]: [string, any]) => ({
-                id: key,
-                content: value[0]?.[5] || "", // Extract content from Python JSON
-                options:
-                  response.answers?.[key]?.options?.map((opt: any) => opt[5]) ||
-                  [],
-                correctAnswer: response.correct_options?.[key]
-                  ? response.answers?.[key]?.options?.findIndex(
-                      (opt: any) => opt[5] === response.correct_options[key]
-                    )
-                  : 0,
-                category: this.selectedImportCategory || "Chưa phân loại",
-                createdAt: new Date(),
-              }))
-          );
-        } else {
-          console.error("Invalid questionsImported format:", questionsImported);
-          throw new Error("questionsImported is not in a valid format");
-        }
+        // API trả về addedCount thay vì questionsImported
+        const addedCount = response.addedCount || 0;
 
         this.processingProgress = 100;
-        this.processingMessage = "Hoàn thành!";
+        this.processingMessage = 'Hoàn thành!';
         this.importResults = {
-          questionsImported: questionsImported.length,
-          duplicatesFound: response.duplicatesFound || 0,
+          questionsImported: addedCount,
           errors: response.errors || [],
         };
 
-        this.showToastMessage(`Import thành công ${questionsImported.length} câu hỏi!`, 'success');
-        
+        this.showToastMessage(
+          `Import thành công ${addedCount} câu hỏi!`,
+          'success'
+        );
+
         // Refresh questions list after import
         setTimeout(() => {
           this.loadQuestions();
         }, 1000);
-        
       } catch (error: any) {
-        console.error("Import Error:", error);
+        console.error('Import Error:', error);
         this.showToastMessage('Lỗi khi import file JSON', 'error');
         this.importResults = {
           questionsImported: 0,
-          duplicatesFound: 0,
-          errors: [error.message || "Không thể import file JSON"]
+          errors: [error.message || 'Không thể import file JSON'],
         };
       } finally {
         this.isProcessing = false;
       }
     };
-    
+
     reader.onerror = () => {
       this.showToastMessage('Không thể đọc file JSON', 'error');
       this.isProcessing = false;
     };
-    
+
     reader.readAsText(this.selectedFile);
   }
 

@@ -31,6 +31,7 @@ export interface ExamConfig {
   numberOfQuestions: number;
   timeLimit: number; // in minutes
   randomize: boolean;
+  category?: string; // Add category filter
 }
 
 export interface PDFParseResult {
