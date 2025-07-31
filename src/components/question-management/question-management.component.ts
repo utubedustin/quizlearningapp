@@ -26,8 +26,10 @@ export class QuestionManagementComponent implements OnInit {
 
   showQuestionDialog = false;
   showImportDialog = false;
+  showDeleteCategoryDialog = false;
   isEditMode = false;
   isSaving = false;
+  isDeleting = false;
 
   selectedFile: File | null = null;
   isProcessing = false;
@@ -35,6 +37,7 @@ export class QuestionManagementComponent implements OnInit {
   processingMessage = '';
   isDragOver = false;
   importResults: any = null;
+  selectedDeleteCategory = '';
 
   mongoConfig = { isConnected: false };
 
@@ -53,6 +56,10 @@ export class QuestionManagementComponent implements OnInit {
 
   editingQuestionId: string | null = null;
   selectedImportCategory: string = '';
+
+  // Multiple selection
+  selectedQuestions: Set<string> = new Set();
+  showDeleteSelectedButton = false;
 
   // Pagination
   currentPage = 1;
@@ -255,6 +262,83 @@ export class QuestionManagementComponent implements OnInit {
       return matchesSearch && matchesCategory;
     });
     this.currentPage = 1; // Reset to first page when filtering
+    // Clear selections when filtering
+    this.selectedQuestions.clear();
+    this.updateDeleteSelectedButton();
+  }
+
+  // Multiple selection methods
+  onQuestionSelect(questionId: string, event: any) {
+    if (event.target.checked) {
+      this.selectedQuestions.add(questionId);
+    } else {
+      this.selectedQuestions.delete(questionId);
+    }
+    this.updateDeleteSelectedButton();
+  }
+
+  isQuestionSelected(questionId: string): boolean {
+    return this.selectedQuestions.has(questionId);
+  }
+
+  selectAllQuestions(event: any) {
+    if (event.target.checked) {
+      this.paginatedQuestions.forEach(q => this.selectedQuestions.add(q._id));
+    } else {
+      this.paginatedQuestions.forEach(q => this.selectedQuestions.delete(q._id));
+    }
+    this.updateDeleteSelectedButton();
+  }
+
+  isAllSelected(): boolean {
+    return this.paginatedQuestions.length > 0 && 
+           this.paginatedQuestions.every(q => this.selectedQuestions.has(q._id));
+  }
+
+  isIndeterminate(): boolean {
+    const selectedCount = this.paginatedQuestions.filter(q => this.selectedQuestions.has(q._id)).length;
+    return selectedCount > 0 && selectedCount < this.paginatedQuestions.length;
+  }
+
+  private updateDeleteSelectedButton() {
+    this.showDeleteSelectedButton = this.selectedQuestions.size > 0;
+  }
+
+  async confirmDeleteSelected() {
+    const selectedCount = this.selectedQuestions.size;
+    const confirmed = await this.dialogService.confirm({
+      title: 'Xóa câu hỏi đã chọn',
+      message: `Bạn có chắc chắn muốn xóa ${selectedCount} câu hỏi đã chọn?\n\nHành động này không thể hoàn tác.`,
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
+    });
+
+    if (confirmed) {
+      this.deleteSelectedQuestions();
+    }
+  }
+
+  deleteSelectedQuestions() {
+    const selectedIds = Array.from(this.selectedQuestions);
+    this.loadingService.show(`Đang xóa ${selectedIds.length} câu hỏi...`);
+
+    try {
+      this.questionService.deleteMultipleQuestions(selectedIds);
+      this.showToastMessage(`Xóa thành công ${selectedIds.length} câu hỏi!`, 'success');
+      
+      // Clear selections
+      this.selectedQuestions.clear();
+      this.updateDeleteSelectedButton();
+
+      // Refresh questions list
+      setTimeout(() => {
+        this.loadQuestions();
+      }, 500);
+    } catch (error) {
+      console.error('Error deleting selected questions:', error);
+      this.showToastMessage('Lỗi khi xóa câu hỏi', 'error');
+      this.loadingService.hide();
+    }
   }
 
   openAddDialog() {
@@ -265,6 +349,10 @@ export class QuestionManagementComponent implements OnInit {
 
   editQuestion(question: Question) {
     this.isEditMode = true;
+    
+    // Determine question type based on correctAnswer
+    const questionType = Array.isArray(question.correctAnswer) ? 'multiple' : 'single';
+    
     this.questionForm = {
       content: question.content,
       options: [...question.options],
@@ -272,7 +360,7 @@ export class QuestionManagementComponent implements OnInit {
         ? [...question.correctAnswer]
         : question.correctAnswer,
       category: question.category || '',
-      type: Array.isArray(question.correctAnswer) ? 'multiple' : 'single',
+      type: questionType,
     };
     this.editingQuestionId = question._id;
     this.showQuestionDialog = true;
@@ -419,6 +507,60 @@ export class QuestionManagementComponent implements OnInit {
     this.importResults = null;
   }
 
+  // Delete category methods
+  openDeleteCategoryDialog() {
+    this.showDeleteCategoryDialog = true;
+    this.selectedDeleteCategory = '';
+  }
+
+  closeDeleteCategoryDialog() {
+    this.showDeleteCategoryDialog = false;
+    this.selectedDeleteCategory = '';
+    this.isDeleting = false;
+  }
+
+  async confirmDeleteCategory() {
+    if (!this.selectedDeleteCategory) {
+      this.showToastMessage('Vui lòng chọn danh mục để xóa', 'error');
+      return;
+    }
+
+    const questionsInCategory = this.questions.filter(q => q.category === this.selectedDeleteCategory).length;
+    
+    const confirmed = await this.dialogService.confirm({
+      title: 'Xóa danh mục',
+      message: `Bạn có chắc chắn muốn xóa danh mục "${this.selectedDeleteCategory}"?\n\nSẽ có ${questionsInCategory} câu hỏi bị xóa.\n\nHành động này không thể hoàn tác.`,
+      confirmText: 'Xóa danh mục',
+      cancelText: 'Hủy',
+    });
+
+    if (confirmed) {
+      this.deleteCategory();
+    }
+  }
+
+  deleteCategory() {
+    this.isDeleting = true;
+    this.loadingService.show(`Đang xóa danh mục "${this.selectedDeleteCategory}"...`);
+
+    try {
+      this.questionService.deleteQuestionsByCategory(this.selectedDeleteCategory);
+      this.showToastMessage(`Xóa danh mục "${this.selectedDeleteCategory}" thành công!`, 'success');
+      
+      this.closeDeleteCategoryDialog();
+
+      // Refresh questions list
+      setTimeout(() => {
+        this.loadQuestions();
+      }, 500);
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      this.showToastMessage('Lỗi khi xóa danh mục', 'error');
+      this.loadingService.hide();
+      this.isDeleting = false;
+    }
+  }
+
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file && file.type === 'application/json') {
@@ -544,5 +686,9 @@ export class QuestionManagementComponent implements OnInit {
 
   getChar(code: number): string {
     return String.fromCharCode(code);
+  }
+
+  getQuestionCountByCategory(category: string): number {
+    return this.questions.filter(q => q.category === category).length;
   }
 }

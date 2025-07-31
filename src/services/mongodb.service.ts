@@ -117,6 +117,22 @@ export class MongoDBService {
       );
   }
 
+  // Delete questions by category
+  deleteQuestionsByCategory(category: string): Observable<{success: boolean; deletedCount: number}> {
+    return this.http.delete<{success: boolean; deletedCount: number}>(`${environment.api.baseUrl}/questions/category/${encodeURIComponent(category)}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  // Delete multiple questions by IDs
+  deleteMultipleQuestions(ids: string[]): Observable<{success: boolean; deletedCount: number}> {
+    return this.http.post<{success: boolean; deletedCount: number}>(`${environment.api.baseUrl}/questions/delete-multiple`, { ids }, this.httpOptions)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   // Check for duplicate questions
   checkDuplicateQuestions(questions: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>[]): Observable<{
     duplicates: string[];

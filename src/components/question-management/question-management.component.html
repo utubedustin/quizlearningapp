@@ -23,6 +23,9 @@
       <button class="btn btn-secondary" (click)="openImportDialog()">
         📄 Import JSON
       </button>
+      <button class="btn btn-danger" (click)="openDeleteCategoryDialog()">
+        🗑️ Xóa danh mục
+      </button>
       <button class="btn btn-primary" (click)="openAddDialog()">
         ➕ Thêm câu hỏi
       </button>
@@ -63,12 +66,39 @@
 
   <!-- Questions List -->
   <div class="grid gap-6">
+    <!-- Select All Checkbox -->
+    <div *ngIf="paginatedQuestions.length > 0" class="card select-all-card">
+      <label class="select-all-label">
+        <input
+          type="checkbox"
+          [checked]="isAllSelected()"
+          [indeterminate]="isIndeterminate()"
+          (change)="selectAllQuestions($event)"
+          class="checkbox-input"
+        />
+        <span class="select-all-text">
+          {{ selectedQuestions.size > 0 ? 'Đã chọn ' + selectedQuestions.size + ' câu hỏi' : 'Chọn tất cả câu hỏi trên trang này' }}
+        </span>
+      </label>
+    </div>
+
     <div
       *ngFor="let question of paginatedQuestions; let i = index"
       class="card"
+      [class.selected-card]="isQuestionSelected(question._id)"
     >
-      <div class="flex justify-between items-start gap-4">
-        <div class="flex-1">
+      <div class="flex justify-between items-start gap-2">
+        <!-- Selection Checkbox -->
+        <div class="question-checkbox">
+          <input
+            type="checkbox"
+            [checked]="isQuestionSelected(question._id)"
+            (change)="onQuestionSelect(question._id, $event)"
+            class="checkbox-input"
+          />
+        </div>
+        
+        <div class="flex-1" style="width: -webkit-fill-available;">
           <h3 class="question-content-text">
             {{ (currentPage - 1) * pageSize + i + 1 }}. {{ question.content }}
           </h3>
@@ -153,6 +183,57 @@
     <div class="text-6xl mb-4">📝</div>
     <h3 class="text-xl font-semibold mb-2">Không tìm thấy câu hỏi nào</h3>
     <p class="mb-4">Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>
+  </div>
+</div>
+
+<!-- Floating Delete Selected Button -->
+<div *ngIf="showDeleteSelectedButton" class="floating-delete-button">
+  <button class="btn btn-danger btn-floating" (click)="confirmDeleteSelected()">
+    <span class="btn-icon">🗑️</span>
+    <span class="btn-text">Xóa {{ selectedQuestions.size }} câu hỏi</span>
+  </button>
+</div>
+
+<!-- Delete Category Dialog -->
+<div
+  *ngIf="showDeleteCategoryDialog"
+  class="dialog-overlay"
+  (click)="closeDeleteCategoryDialog()"
+>
+  <div class="dialog-content" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <h2 class="text-xl font-bold">🗑️ Xóa danh mục</h2>
+      <button class="dialog-close" (click)="closeDeleteCategoryDialog()">×</button>
+    </div>
+
+    <div class="dialog-body">
+      <div class="form-group">
+        <label class="form-label">📂 Chọn danh mục cần xóa</label>
+        <select [(ngModel)]="selectedDeleteCategory" class="select">
+          <option value="">-- Chọn danh mục --</option>
+          <option *ngFor="let category of categories" [value]="category">
+            {{ category }} ({{ getQuestionCountByCategory(category) }} câu hỏi)
+          </option>
+        </select>
+        <p class="form-help text-error">
+          ⚠️ Tất cả câu hỏi trong danh mục sẽ bị xóa vĩnh viễn!
+        </p>
+      </div>
+    </div>
+
+    <div class="dialog-footer">
+      <button class="btn btn-outline" (click)="closeDeleteCategoryDialog()">
+        ❌ Hủy
+      </button>
+      <button 
+        class="btn btn-danger" 
+        (click)="confirmDeleteCategory()"
+        [disabled]="!selectedDeleteCategory || isDeleting"
+      >
+        <span *ngIf="isDeleting" class="loading-spinner"></span>
+        🗑️ Xóa danh mục
+      </button>
+    </div>
   </div>
 </div>
 

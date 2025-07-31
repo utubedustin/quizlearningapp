@@ -25,6 +25,99 @@
   font-size: 0.75rem;
 }
 
+/* Selection Styles */
+.select-all-card {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0ea5e9;
+  padding: 1rem 1.5rem;
+}
+
+.select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: #0c4a6e;
+}
+
+.select-all-text {
+  font-size: 0.95rem;
+}
+
+.question-checkbox {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.125rem;
+  margin-right: 0.75rem;
+}
+
+.selected-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+}
+
+.selected-card::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706, #b45309);
+  opacity: 1;
+}
+
+/* Floating Delete Button */
+.floating-delete-button {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  animation: slideInUp 0.3s ease-out;
+}
+
+.btn-floating {
+  padding: 1rem 1.5rem;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.4);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 200px;
+  justify-content: center;
+}
+
+.btn-floating:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 40px rgba(239, 68, 68, 0.5);
+}
+
+.btn-floating:active {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+.btn-text {
+  font-weight: 700;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Page Size Selector */
 .select-sm {
   padding: 0.375rem 0.75rem;
@@ -312,6 +405,16 @@
   color: #64748b;
   margin-top: 0.5rem;
   line-height: 1.5;
+}
+
+.form-help.text-error {
+  color: #dc2626;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #f87171;
+  margin-top: 0.75rem;
 }
 
 .form-row {
@@ -872,6 +975,14 @@
     transform: translateY(-2px);
   }
 
+  .select-all-card {
+    padding: 0.875rem 1rem;
+  }
+
+  .select-all-text {
+    font-size: 0.85rem;
+  }
+
   .question-content-text {
     font-size: 0.95rem;
     line-height: 1.5;
@@ -920,6 +1031,20 @@
     width: 100%;
     padding: 0.625rem 1rem;
     font-size: 0.8rem;
+  }
+
+  /* Floating button mobile */
+  .floating-delete-button {
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+  }
+
+  .btn-floating {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.9rem;
+    min-width: auto;
   }
 
   /* Pagination */

@@ -527,20 +527,23 @@ export class QuestionService {
 
     data.forEach((q, index) => {
       if (q.question && Array.isArray(q.options) && q.correct_answers) {
-        // Handle multiple correct answers
-        const correctAnswers: number[] = [];
+        // Find all correct answer indices
+        const correctIndices: number[] = [];
         q.correct_answers.forEach((correctAnswer: any) => {
-          const correctIndex = q.options.findIndex((opt: any) => opt === correctAnswer);
-          if (correctIndex !== -1) {
-            correctAnswers.push(correctIndex);
+          const index = q.options.findIndex((opt: any) => opt === correctAnswer);
+          if (index !== -1) {
+            correctIndices.push(index);
           }
         });
 
-        if (correctAnswers.length > 0) {
+        if (correctIndices.length > 0) {
+          // If only one correct answer, store as number; if multiple, store as array
+          const finalCorrectAnswer = correctIndices.length === 1 ? correctIndices[0] : correctIndices;
+
           added.push({
             content: q.question,
             options: q.options,
-            correctAnswer: correctAnswers.length === 1 ? correctAnswers[0] : correctAnswers,
+            correctAnswer: finalCorrectAnswer,
             category: q.category || "",
             createdAt: new Date(),
           });
@@ -557,5 +560,60 @@ export class QuestionService {
       duplicatesFound: 0,
       errors,
     });
+  }
+
+  // Delete questions by category
+  deleteQuestionsByCategory(category: string): void {
+    this.mongoService
+      .deleteQuestionsByCategory(category)
+      .pipe(
+        catchError((error) => {
+          console.error(
+            "Failed to delete questions by category from MongoDB, deleting from localStorage:",
+            error
+          );
+          return this.deleteQuestionsByCategoryFromLocalStorage(category);
+        })
+      )
+      .subscribe(() => {
+        const currentQuestions = this.questionsSubject.value;
+        const updatedQuestions = currentQuestions.filter(q => q.category !== category);
+        this.questionsSubject.next(updatedQuestions);
+      });
+  }
+
+  private deleteQuestionsByCategoryFromLocalStorage(category: string): Observable<{ success: boolean; deletedCount: number }> {
+    const currentQuestions = this.questionsSubject.value;
+    const questionsToDelete = currentQuestions.filter(q => q.category === category);
+    const updatedQuestions = currentQuestions.filter(q => q.category !== category);
+    localStorage.setItem("questions", JSON.stringify(updatedQuestions));
+    return of({ success: true, deletedCount: questionsToDelete.length });
+  }
+
+  // Delete multiple questions by IDs
+  deleteMultipleQuestions(ids: string[]): void {
+    this.mongoService
+      .deleteMultipleQuestions(ids)
+      .pipe(
+        catchError((error) => {
+          console.error(
+            "Failed to delete multiple questions from MongoDB, deleting from localStorage:",
+            error
+          );
+          return this.deleteMultipleQuestionsFromLocalStorage(ids);
+        })
+      )
+      .subscribe(() => {
+        const currentQuestions = this.questionsSubject.value;
+        const updatedQuestions = currentQuestions.filter(q => !ids.includes(q._id));
+        this.questionsSubject.next(updatedQuestions);
+      });
+  }
+
+  private deleteMultipleQuestionsFromLocalStorage(ids: string[]): Observable<{ success: boolean; deletedCount: number }> {
+    const currentQuestions = this.questionsSubject.value;
+    const updatedQuestions = currentQuestions.filter(q => !ids.includes(q._id));
+    localStorage.setItem("questions", JSON.stringify(updatedQuestions));
+    return of({ success: true, deletedCount: ids.length });
   }
 }
