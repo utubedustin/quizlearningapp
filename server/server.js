@@ -151,19 +151,27 @@ app.post("/api/questions/import-json", async (req, res) => {
         continue;
       }
 
-      const correctIndex = options.findIndex((opt) =>
-        correct_answers.includes(opt)
-      );
+      // Find all correct answer indices
+      const correctIndices = [];
+      correct_answers.forEach((correctAnswer) => {
+        const index = options.findIndex((opt) => opt === correctAnswer);
+        if (index !== -1) {
+          correctIndices.push(index);
+        }
+      });
 
-      if (correctIndex === -1) {
+      if (correctIndices.length === 0) {
         errors.push(`Câu ${index + 1} không tìm thấy đáp án đúng`);
         continue;
       }
 
+      // If only one correct answer, store as number; if multiple, store as array
+      const finalCorrectAnswer = correctIndices.length === 1 ? correctIndices[0] : correctIndices;
+
       added.push({
         content: question,
         options,
-        correctAnswer: correctIndex,
+        correctAnswer: finalCorrectAnswer,
         category,
         difficulty,
         createdAt: now,
