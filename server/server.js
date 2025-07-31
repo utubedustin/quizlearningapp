@@ -234,6 +234,62 @@ app.delete("/api/questions/:id", async (req, res) => {
   }
 });
 
+// Delete questions by category
+app.delete("/api/questions/category/:category", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: "Database not connected" });
+    }
+
+    const { category } = req.params;
+    const decodedCategory = decodeURIComponent(category);
+    
+    const result = await db
+      .collection("questions")
+      .deleteMany({ category: decodedCategory });
+
+    res.json({ 
+      success: true, 
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} questions from category "${decodedCategory}"` 
+    });
+  } catch (error) {
+    console.error("Error deleting questions by category:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete multiple questions by IDs
+app.post("/api/questions/delete-multiple", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: "Database not connected" });
+    }
+
+    const { ids } = req.body;
+    
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Invalid or empty IDs array" });
+    }
+
+    // Convert string IDs to ObjectIds
+    const objectIds = ids.map(id => new ObjectId(id));
+    
+    const result = await db
+      .collection("questions")
+      .deleteMany({ _id: { $in: objectIds } });
+
+    res.json({ 
+      success: true, 
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} questions` 
+    });
+  } catch (error) {
+    console.error("Error deleting multiple questions:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/questions/check-duplicates", async (req, res) => {
   try {
     if (!db) {
