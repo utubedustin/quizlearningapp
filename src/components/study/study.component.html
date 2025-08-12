@@ -23,6 +23,58 @@
     </ul>
   </div>
 
+  <!-- Category Filter Section -->
+  <div class="category-filter-section" *ngIf="availableCategories.length > 0">
+    <div class="filter-header">
+      <h3 class="filter-title">
+        🏷️ Lọc theo danh mục
+      </h3>
+      <button 
+        class="clear-filters-btn" 
+        (click)="clearAllFilters()"
+        [disabled]="!hasActiveFilters"
+      >
+        🗑️ Xóa bộ lọc
+      </button>
+    </div>
+    
+    <div class="category-chips">
+      <button
+        *ngFor="let category of availableCategories"
+        class="category-chip"
+        [class.selected]="isCategorySelected(category)"
+        [class.unselected]="!isCategorySelected(category)"
+        (click)="toggleCategoryFilter(category)"
+      >
+        <span class="chip-icon">📁</span>
+        <span class="chip-text">{{ category }}</span>
+      </button>
+      
+      <!-- Special chip for wrong answers if it exists -->
+      <button
+        *ngIf="wrongAnswersSetExists"
+        class="category-chip"
+        [class.selected]="isCategorySelected('Câu hỏi sai')"
+        [class.unselected]="!isCategorySelected('Câu hỏi sai')"
+        (click)="toggleCategoryFilter('Câu hỏi sai')"
+      >
+        <span class="chip-icon">🔄</span>
+        <span class="chip-text">Câu hỏi sai</span>
+      </button>
+    </div>
+    
+    <div *ngIf="hasActiveFilters" class="filter-status">
+      📊 Đang hiển thị {{ filteredStudySets.length }} đề từ {{ selectedCategories.size }} danh mục đã chọn
+    </div>
+  </div>
+
+  <!-- No Categories Message -->
+  <div class="category-filter-section" *ngIf="availableCategories.length === 0 && !isLoading">
+    <div class="no-categories">
+      📂 Chưa có danh mục nào. Hãy thêm câu hỏi với danh mục để sử dụng tính năng lọc.
+    </div>
+  </div>
+
   <!-- Loading State -->
   <div *ngIf="isLoading" class="text-center py-8">
     <div class="inline-flex items-center gap-3">

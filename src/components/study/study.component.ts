@@ -3,7 +3,7 @@ import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import { QuestionService } from "../../services/question.service";
-import { QuizSet, QuizResult } from "../../models/question.model";
+import { QuizSet, QuizResult, Question } from "../../models/question.model";
 import { DialogService } from "../../services/dialog.service";
 import { LoadingService } from "../../services/loading.service";
 
@@ -20,6 +20,11 @@ export class StudyComponent implements OnInit {
   studyResults: QuizResult[] = [];
   isLoading = false;
   loadingStates: { [key: string]: boolean } = {};
+  wrongAnswersSetExists: boolean = false;
+  
+  // Category filtering
+  availableCategories: string[] = [];
+  selectedCategories: Set<string> = new Set();
 
   // Pagination
   currentPage = 1;
@@ -59,7 +64,25 @@ export class StudyComponent implements OnInit {
   }
 
   private updatePagination() {
-    this.filteredStudySets = [...this.studySets];
+    // Apply category filters
+    if (this.selectedCategories.size > 0) {
+      this.filteredStudySets = this.studySets.filter(set => {
+        // Special handling for wrong answers set
+        if (set._id === 'wrong-answers-set') {
+          return this.selectedCategories.has('Câu hỏi sai');
+        }
+        
+        // Check if any question in the set matches selected categories
+        return set.questions.some(question => 
+          question.category && this.selectedCategories.has(question.category)
+        );
+      });
+    } else {
+      this.filteredStudySets = [...this.studySets];
+    }
+    
+    // Reset to first page when filtering
+    this.currentPage = 1;
   }
 
   private loadData() {
@@ -70,6 +93,8 @@ export class StudyComponent implements OnInit {
     this.questionService.getQuestions().subscribe((questions) => {
       console.log("Questions loaded for study sets:", questions.length);
       this.studySets = this.questionService.createStudySets();
+      this.wrongAnswersSetExists = this.studySets.some(set => set._id === 'wrong-answers-set');
+      this.extractCategories(questions);
       this.updatePagination();
       console.log("Study sets created:", this.studySets.length);
       this.isLoading = false;
@@ -87,8 +112,42 @@ export class StudyComponent implements OnInit {
     this.questionService.getWrongAnswers().subscribe((wrongAnswers) => {
       console.log("Wrong answers updated:", wrongAnswers.length);
       this.studySets = this.questionService.createStudySets();
+      this.wrongAnswersSetExists = this.studySets.some(set => set._id === 'wrong-answers-set');
       this.updatePagination();
     });
+  }
+
+  private extractCategories(questions: Question[]) {
+    const categorySet = new Set<string>();
+    questions.forEach(question => {
+      if (question.category && question.category.trim()) {
+        categorySet.add(question.category);
+      }
+    });
+    this.availableCategories = Array.from(categorySet).sort();
+  }
+
+  // Category filter methods
+  toggleCategoryFilter(category: string) {
+    if (this.selectedCategories.has(category)) {
+      this.selectedCategories.delete(category);
+    } else {
+      this.selectedCategories.add(category);
+    }
+    this.updatePagination();
+  }
+
+  isCategorySelected(category: string): boolean {
+    return this.selectedCategories.has(category);
+  }
+
+  clearAllFilters() {
+    this.selectedCategories.clear();
+    this.updatePagination();
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.selectedCategories.size > 0;
   }
 
   getSetResult(setId: string): QuizResult | undefined {
